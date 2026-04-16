@@ -22,6 +22,7 @@ let sessionResultList = [];
 let hasAnsweredCurrent = false;
 
 let isTestMode = false;
+let isIsolatedMode = false; // Khóa học sinh trong 1 bài duy nhất
 let testAnswers = []; 
 let clusterSelections = []; 
 let focusedOptionBtn = null; 
@@ -68,10 +69,8 @@ function getYoutubeEmbedUrl(url) {
     return match ? `https://www.youtube.com/embed/${match[1]}?rel=0` : null;
 }
 
-// ==========================================
-// KỊCH BẢN KHỞI ĐỘNG INTRO MA THUẬT TƯƠNG TÁC (ĐÃ FIX LỖI)
-// ==========================================
 window.onload = function() { 
+    // 1. Khởi tạo giao diện cơ bản
     if (window.innerWidth <= 768) {
         const sidebar = document.getElementById('app-sidebar');
         if (sidebar) sidebar.classList.add('collapsed');
@@ -79,143 +78,41 @@ window.onload = function() {
     const themeBtn = document.getElementById('theme-btn');
     if (themeBtn) themeBtn.classList.remove('hidden');
 
+    // 2. CHỐT CHẶN BẢO MẬT: Kiểm tra định danh & Link chia sẻ
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
     const introScreen = document.getElementById('app-intro');
-    if (!introScreen) { goHome(); return; }
-
-    // --- BƯỚC 1: KHỞI TẠO NỀN HẠT TƯƠNG TÁC (TsParticles) ---
-    if (typeof tsParticles !== 'undefined') {
-        tsParticles.load("intro-particles", {
-            particles: {
-                number: { value: 100, density: { enable: true, value_area: 800 } },
-                color: { value: "#3b82f6" },
-                shape: { type: "circle" },
-                opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
-                size: { value: 3, random: true, anim: { enable: false, speed: 40, size_min: 0.1, sync: false } },
-                line_linked: { enable: true, distance: 150, color: "#3b82f6", opacity: 0.2, width: 1 },
-                move: { enable: true, speed: 1, direction: "none", random: true, straight: false, out_mode: "out", bounce: false }
-            },
-            interactivity: {
-                detect_on: "canvas",
-                events: {
-                    onhover: { enable: true, mode: "grab" },
-                    onclick: { enable: true, mode: "push" },
-                    resize: true
-                },
-                modes: {
-                    grab: { distance: 140, line_linked: { opacity: 0.5 } },
-                    push: { particles_nb: 4 }
-                }
-            },
-            retina_detect: true
-        });
-    }
-
-    // --- BƯỚC 2: KHỞI TẠO HOẠT CẢNH CHỮ (Anime.js) ---
-    if (typeof anime !== 'undefined') {
-        const textWrapper = document.querySelector('.ml16');
-        textWrapper.innerHTML = textWrapper.textContent.replace(/\S/g, "<span class='letter'>$&</span>");
-
-        const tl = anime.timeline({loop: false});
-
-        tl.add({
-            targets: '.brand-wrapper',
-            opacity: [0, 1],
-            scale: [0.8, 1],
-            easing: "easeOutExpo",
-            duration: 1000,
-            delay: 300
-        })
-        .add({
-            targets: '.ml16 .letter',
-            translateY: [-100, 0], 
-            opacity: [0, 1],
-            easing: "easeOutElastic(1, .8)", 
-            duration: 800,
-            delay: (el, i) => 30 * i 
-        })
-        .add({
-            targets: '.intro-emoji',
-            scale: [1, 1.3, 1],
-            easing: "easeOutBounce", 
-            duration: 600
-        })
-        // [MỚI] Hiệu ứng lướt lên cho chữ ký tác giả Teus Truong
-        .add({
-            targets: '.intro-author',
-            opacity: [0, 1],
-            translateY: [15, 0],
-            easing: "easeOutExpo",
-            duration: 1000
-        }, '-=400');
-
-        // --- BƯỚC 3: HẸN GIỜ HIỆN Ô NHẬP TÊN ---
-        setTimeout(() => {
-            const welcomeBox = document.getElementById('welcome-box');
-            if (welcomeBox) {
-                welcomeBox.classList.remove('hidden');
-                document.getElementById('hero-name-input').focus();
-            }
-        }, 3000); 
-    } else {
-        // Đề phòng thư viện lỗi tải chậm
-        const welcomeBox = document.getElementById('welcome-box');
-        if (welcomeBox) welcomeBox.classList.remove('hidden');
-    }
     
-    // [MỚI] Cho phép bấm phím Enter để chốt tên nhanh chóng
-    const nameInput = document.getElementById('hero-name-input');
-    if (nameInput) {
-        nameInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') finishIntro();
-        });
-    }
-    if (typeof tsParticles !== 'undefined') tsParticles.dom().forEach(p => p.destroy());
-};
-
-// --- BƯỚC 4: HÀM KẾT THÚC INTRO ---
-function finishIntro() {
-    const nameInput = document.getElementById('hero-name-input');
-    let heroName = nameInput.value.trim() || "Khách truy cập"; 
-
-    // Ghi sổ danh tính học sinh
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('studentName', heroName);
-    localStorage.setItem('studentClass', 'Tự do');
-
-    // Cập nhật tên lên giao diện chính
-    const userNameDisplay = document.getElementById('display-user-name');
-    if (userNameDisplay) userNameDisplay.innerText = heroName;
-
-    // Làm mờ và ẩn Intro
-    const introScreen = document.getElementById('app-intro');
-    if (introScreen) introScreen.classList.add('fade-out');
-    
-    // =========================================================
-    // THUẬT TOÁN ĐIỀU HƯỚNG BÀI HỌC (DEEP LINKING ROUTER)
-    // =========================================================
+    // KIỂM TRA XEM HỌC SINH CÓ ĐANG VÀO BẰNG LINK CHIA SẺ KHÔNG?
     const params = new URLSearchParams(window.location.search);
     const hasQuizParams = params.has('subject') && (params.has('quizTitle') || params.has('quizIndex'));
 
-    if (typeof CLOUD_API_URL !== 'undefined' && CLOUD_API_URL !== '') {
-        // Nếu dùng Cloud: Đợi tải dữ liệu xong mới quyết định rẽ hướng nào
-        document.getElementById('app-title').innerText = "Đang tải dữ liệu...";
-        fetchCloudData().then(() => {
-            fetchUserProgress();
-            if (hasQuizParams) {
-                openQuizFromParams(); // Có Link QR -> Chui thẳng vào bài
-            } else {
-                goHome(); // Không có Link QR -> Ra trang chủ
-            }
-        });
-    } else {
-        // Nếu chỉ dùng LocalStorage
-        if (hasQuizParams) {
-            setTimeout(() => openQuizFromParams(), 500);
+    // CHO PHÉP ĐI QUA NẾU: Đã đăng nhập HOẶC Có link làm bài
+    if (isLoggedIn === 'true' || hasQuizParams) {
+        if (introScreen) introScreen.classList.add('hidden');
+        const loginScreen = document.getElementById('screen-login');
+        if (loginScreen) loginScreen.classList.add('hidden'); // Giấu form đăng nhập đi
+        
+        const heroName = localStorage.getItem('studentName') || "Khách";
+        const userNameDisplay = document.getElementById('display-user-name');
+        if (userNameDisplay) userNameDisplay.innerText = heroName;
+
+        if (typeof CLOUD_API_URL !== 'undefined' && CLOUD_API_URL !== '') {
+            document.getElementById('app-title').innerText = "Đang tải dữ liệu...";
+            fetchCloudData().then(() => {
+                fetchUserProgress();
+                if (hasQuizParams) openQuizFromParams();
+                else goHome();
+            });
         } else {
-            goHome();
+            if (hasQuizParams) setTimeout(() => openQuizFromParams(), 500);
+            else goHome();
         }
+    } else {
+        // [CHƯA ĐĂNG NHẬP & VÀO TRANG CHỦ]: Khóa hệ thống
+        if (introScreen) introScreen.classList.add('hidden'); 
+        showScreen('screen-login'); 
     }
-}
+};
 
 function switchAuthTab(tab) {
     document.getElementById('tab-login').classList.remove('active');
@@ -852,10 +749,19 @@ function resetProgress(quiz) {
 }
 
 function exitQuiz() {
+    // Hành động khóa cửa: Nếu đang ở chế độ Cách ly thì chặn đứng, không cho về Trang chủ
+    const closeAction = () => {
+        if (isIsolatedMode) {
+            document.body.innerHTML = "<div style='display:flex; flex-direction:column; gap: 15px; height:100vh; align-items:center; justify-content:center; background:var(--bg-main); color:var(--primary); font-size:24px; font-weight:bold; text-align:center; padding: 20px;'>🎓<br>Dữ liệu đã được ghi nhận.<br>Em có thể đóng cửa sổ này!</div>";
+        } else {
+            openSubject(currentSubject);
+        }
+    };
+
     if (currentQuestionIndex > 0 || hasAnsweredCurrent || (isTestMode && testAnswers.some(a => a !== null))) {
         const overlay = document.createElement('div'); overlay.id = 'exit-modal-overlay'; overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);";
         const box = document.createElement('div'); box.style.cssText = "background:var(--card-bg); padding:30px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9);";
-        box.innerHTML = `<h3 style="margin-top:0; color:var(--text-main); font-size:22px; font-weight: 500;">Tạm dừng làm bài</h3><p style="color:var(--text-muted); margin-bottom:25px; line-height:1.5;">Bạn đang làm dở bài tập này. Bạn muốn lưu lại tiến trình để lần sau làm tiếp, hay xóa đi để làm lại từ đầu?</p><div style="display:flex; flex-direction:column; gap:12px;"><button id="btn-save-exit" class="btn btn-primary" style="width:100%; justify-content:center;">💾 Lưu tiến trình & Thoát</button><button id="btn-reset-exit" class="btn btn-danger" style="width:100%; justify-content:center;">🗑️ Xóa tiến trình & Thoát</button><button id="btn-cancel-exit" class="btn btn-secondary" style="width:100%; justify-content:center;">❌ Hủy</button></div>`;
+        box.innerHTML = `<h3 style="margin-top:0; color:var(--text-main); font-size:22px; font-weight: 500;">Thoát bài làm</h3><p style="color:var(--text-muted); margin-bottom:25px; line-height:1.5;">Bạn đang làm dở bài tập này. Bạn muốn lưu lại tiến trình để lần sau làm tiếp, hay xóa đi để làm lại từ đầu?</p><div style="display:flex; flex-direction:column; gap:12px;"><button id="btn-save-exit" class="btn btn-primary" style="width:100%; justify-content:center;">💾 Lưu tiến trình & Thoát</button><button id="btn-reset-exit" class="btn btn-danger" style="width:100%; justify-content:center;">🗑️ Xóa tiến trình & Thoát</button><button id="btn-cancel-exit" class="btn btn-secondary" style="width:100%; justify-content:center;">❌ Tiếp tục làm</button></div>`;
         overlay.appendChild(box); document.body.appendChild(overlay);
 
         document.getElementById('btn-save-exit').onclick = () => {
@@ -865,14 +771,16 @@ function exitQuiz() {
                 sessionCorrectCount: sessionCorrectCount, sessionResultList: sessionResultList, testAnswers: testAnswers, remainingSeconds: remainingSeconds
             };
             localStorage.setItem('myStudyData', JSON.stringify(db)); 
-            document.body.removeChild(overlay); openSubject(currentSubject);
+            document.body.removeChild(overlay); 
+            closeAction(); // Gọi khóa cửa
         };
         
         document.getElementById('btn-reset-exit').onclick = () => {
             if(quizTimerInterval) clearInterval(quizTimerInterval);
             delete db[currentSubject][currentQuizIndex].progress;
             localStorage.setItem('myStudyData', JSON.stringify(db)); 
-            document.body.removeChild(overlay); openSubject(currentSubject);
+            document.body.removeChild(overlay); 
+            closeAction(); // Gọi khóa cửa
         };
         document.getElementById('btn-cancel-exit').onclick = () => { document.body.removeChild(overlay); };
     } else {
@@ -880,7 +788,7 @@ function exitQuiz() {
         if (currentQuizIndex !== -1 && db[currentSubject][currentQuizIndex]) {
             delete db[currentSubject][currentQuizIndex].progress; localStorage.setItem('myStudyData', JSON.stringify(db));
         }
-        openSubject(currentSubject);
+        closeAction(); // Gọi khóa cửa
     }
 }
 
@@ -1197,17 +1105,61 @@ function isQuestionAnswered(idx) {
 /* ==========================================
    7. LOGIC CHẤM ĐIỂM & RENDER KẾT QUẢ TẤT CẢ CÂU
 ========================================== */
+/* ==========================================
+   BỘ CÔNG CỤ HIỆU ỨNG & ÂM THANH (ĐÃ FIX LỖI TỊT ÂM)
+========================================== */
+let vAudioCtx = null;
+function getAudioCtx() {
+    if (!vAudioCtx) { vAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if (vAudioCtx.state === 'suspended') { vAudioCtx.resume(); }
+    return vAudioCtx;
+}
+
 function playCorrectSound() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator(); const gainNode = ctx.createGain();
         osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); 
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); 
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3); 
         osc.connect(gainNode); gainNode.connect(ctx.destination);
         osc.start(); osc.stop(ctx.currentTime + 0.3);
     } catch (e) {}
+}
+
+function playErrorSound() {
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator(); const gainNode = ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.2);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+        osc.connect(gainNode); gainNode.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.2);
+    } catch (e) {}
+}
+
+function playComboSound(streakCount) {
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator(); const gainNode = ctx.createGain();
+        osc.type = 'square'; let baseFreq = 400 + (streakCount * 50); 
+        osc.frequency.setValueAtTime(baseFreq, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(baseFreq + 200, ctx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+        osc.connect(gainNode); gainNode.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {}
+}
+
+function showFloatingPoints(element, points) {
+    const rect = element.getBoundingClientRect(); const pt = document.createElement('div');
+    pt.className = 'floating-points'; pt.innerText = `+${points}`;
+    pt.style.left = `${rect.left + rect.width / 2 - 20}px`; pt.style.top = `${rect.top}px`;
+    document.body.appendChild(pt); setTimeout(() => pt.remove(), 1000);
+}
+
+function triggerConfetti() {
+    if(typeof confetti !== 'undefined') {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b'] });
+    }
 }
 
 async function confirmSubmitTest(isForced) {
@@ -1904,20 +1856,30 @@ async function updateVocabRanking(topic, score, streak) {
     }
 }
 
+// 1. Mở màn hình Game: Nạp trạng thái đã lưu vào các nút gạt
 function openVocabGame() {
-    if (!db.Vocabulary || db.Vocabulary.length < 4) { alert("⚠️ Kho từ vựng đang có ít hơn 4 từ! Giáo viên vui lòng vào [Quản lý Từ Vựng] thêm ít nhất 4 từ để hệ thống có thể tạo đáp án trắc nghiệm nhé."); return; }
-    showScreen('screen-vocab-game'); document.getElementById('app-title').innerText = "Game Từ Vựng";
+    if (!db.Vocabulary || db.Vocabulary.length < 4) { 
+        alert("⚠️ Kho từ vựng cần ít nhất 4 từ!"); return; 
+    }
+    showScreen('screen-vocab-game'); 
+    document.getElementById('app-title').innerText = "Game Từ Vựng";
     
-    // Đẩy dữ liệu vào Bento Box
+    // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM ---
     const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))]; 
     document.getElementById('bento-total-words').innerText = db.Vocabulary.length;
     document.getElementById('bento-total-topics').innerText = topics.length;
 
-    // Tải kỷ lục cá nhân từ máy
+    // Nạp kỷ lục cá nhân lên giao diện
     const records = JSON.parse(localStorage.getItem('vocabRecords')) || { maxScore: 0, maxStreak: 0 };
     document.getElementById('bento-max-score').innerText = records.maxScore;
     document.getElementById('bento-max-streak').innerText = records.maxStreak;
 
+    // Đồng bộ các nút gạt với vSettings hiện tại
+    document.getElementById('start-set-tts').checked = vSettings.autoTTS;
+    document.getElementById('start-set-timer').checked = vSettings.timer;
+    document.getElementById('start-set-effects').checked = vSettings.effects;
+
+    // Hiển thị danh sách chủ đề
     const select = document.getElementById('vocab-topic-select');
     select.innerHTML = '<option value="ALL">🌟 Trộn Tất cả từ vựng</option>'; 
     topics.forEach(t => { select.innerHTML += `<option value="${t}">📁 Chủ đề: ${t}</option>`; });
@@ -1927,23 +1889,33 @@ function openVocabGame() {
     document.getElementById('vocab-game-over').classList.add('hidden');
 }
 
+// 2. Bắt đầu Game: Đọc các nút gạt và áp dụng vào game
 function startVocabGame() {
     const selectedTopic = document.getElementById('vocab-topic-select').value;
+    
+    // ĐỌC CÀI ĐẶT TỪ CÁC NÚT GẠT TRƯỚC KHI VÀO GAME
+    vSettings.autoTTS = document.getElementById('start-set-tts').checked;
+    vSettings.timer = document.getElementById('start-set-timer').checked;
+    vSettings.effects = document.getElementById('start-set-effects').checked;
+    localStorage.setItem('vocabSettings', JSON.stringify(vSettings));
+
     currentVocabTopic = selectedTopic;
     playingVocabPool = selectedTopic === 'ALL' ? db.Vocabulary : db.Vocabulary.filter(v => (v.topic || 'Chung') === selectedTopic);
-    if (playingVocabPool.length < 4) { alert(`⚠️ Chủ đề này chỉ có ${playingVocabPool.length} từ. Cần ít nhất 4 từ để tạo trắc nghiệm!`); return; }
+    
+    if (playingVocabPool.length < 4) { 
+        alert(`⚠️ Chủ đề này không đủ từ vựng!`); return; 
+    }
+
     document.getElementById('vocab-start-menu').classList.add('hidden');
     document.getElementById('vocab-game-play-area').classList.remove('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
-    document.getElementById('vocab-question-card').classList.remove('hidden');
+    
     vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 3;
     updateVocabUI();
-    if (selectedTopic !== 'ALL') {
-        displayVocabRanking(selectedTopic);
-    } else {
-        const container = document.getElementById('vocab-rankings');
-        if (container) container.classList.add('hidden');
-    }
+    
+    if (selectedTopic !== 'ALL') displayVocabRanking(selectedTopic);
+    else document.getElementById('vocab-rankings')?.classList.add('hidden');
+
     generateVocabQuestion();
 }
 
@@ -1956,11 +1928,87 @@ function updateVocabUI() {
 
 function getRandomItems(arr, count, excludeItem) { let filtered = arr.filter(item => item !== excludeItem); return filtered.sort(() => Math.random() - 0.5).slice(0, count); }
 
+// Biến toàn cục cho Game & Cài đặt
+let vQuestionStartTime = 0;
+let vTimerAnimation = null;
+let vSettings = JSON.parse(localStorage.getItem('vocabSettings')) || {
+    autoTTS: true,
+    timer: true,
+    effects: true
+};
+
+// ==========================================
+// 1. HÀM TẠO BẢNG CÀI ĐẶT (SETTINGS MODAL)
+// ==========================================
+function showVocabSettings() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);";
+    
+    const box = document.createElement('div');
+    box.style.cssText = "background:var(--card-bg); padding:25px; border-radius:16px; border:1px solid var(--border-color); width:90%; max-width:350px; text-align:left; animation: fadeInUp 0.3s ease;";
+    
+    box.innerHTML = `
+        <h3 style="margin-top:0; color:var(--text-main); font-size:20px; text-align:center; margin-bottom: 20px;">⚙️ Tùy chọn Trải nghiệm</h3>
+        
+        <div class="setting-row">
+            <span style="color:var(--text-main); font-weight:500;">🔊 Tự động đọc từ (TTS)</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="set-tts" ${vSettings.autoTTS ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="setting-row">
+            <span style="color:var(--text-main); font-weight:500;">⏱️ Áp lực thời gian (Tính giờ)</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="set-timer" ${vSettings.timer ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <span style="color:var(--text-main); font-weight:500;">✨ Hiệu ứng & Âm thanh</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="set-effects" ${vSettings.effects ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:20px; padding:12px;" id="btn-save-settings">Xong</button>
+    `;
+    
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById('btn-save-settings').onclick = () => {
+        vSettings.autoTTS = document.getElementById('set-tts').checked;
+        vSettings.timer = document.getElementById('set-timer').checked;
+        vSettings.effects = document.getElementById('set-effects').checked;
+        
+        localStorage.setItem('vocabSettings', JSON.stringify(vSettings)); // Lưu lại
+        document.body.removeChild(overlay);
+        
+        // Ẩn/hiện thanh thời gian ngay lập tức theo cài đặt
+        const timerContainer = document.querySelector('.vocab-timer-container');
+        if(timerContainer) timerContainer.style.display = vSettings.timer ? 'block' : 'none';
+    };
+}
+
+// ==========================================
+// 2. HÀM TẠO CÂU HỎI (Áp dụng Tùy chọn)
+// ==========================================
 function generateVocabQuestion() {
-    document.getElementById('vocab-explanation').classList.add('hidden'); document.getElementById('vocab-options-container').style.pointerEvents = 'auto';
+    if (playingVocabPool.length < 4) { alert("Cần ít nhất 4 từ vựng để chơi!"); return; } // Sửa lỗi lấy dữ liệu
+    
+    // Tự động tạo câu hỏi ngẫu nhiên như cũ
+    document.getElementById('vocab-explanation').classList.add('hidden'); 
+    document.getElementById('vocab-options-container').style.pointerEvents = 'auto';
+    
     let type, targetItem, questionText, correctAnswer, optionsArr, hint; let valid = false;
-    const words = playingVocabPool.filter(v => v.type === 'word' || !v.type); const structures = playingVocabPool.filter(v => v.type === 'structure');
-    const hasSyn = words.some(w => w.syn && w.syn !== '-'); const hasAnt = words.some(w => w.ant && w.ant !== '-');
+    const words = playingVocabPool.filter(v => v.type === 'word' || !v.type); 
+    const structures = playingVocabPool.filter(v => v.type === 'structure');
+    const hasSyn = words.some(w => w.syn && w.syn !== '-'); 
+    const hasAnt = words.some(w => w.ant && w.ant !== '-');
 
     let attempts = 0;
     while (!valid && attempts < 100) {
@@ -1980,22 +2028,129 @@ function generateVocabQuestion() {
             else if (type === 'antonym' && targetItem.ant) { questionText = `Từ nào TRÁI NGHĨA (Antonym) với "${targetItem.en}"?`; let ants = targetItem.ant.split(','); correctAnswer = ants[Math.floor(Math.random() * ants.length)].trim(); optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; hint = "TRÁI NGHĨA"; valid = true; }
         }
     }
-    vCurrentQuestion = { item: targetItem, type, correct: correctAnswer }; optionsArr = [...new Set(optionsArr)]; 
-    while(optionsArr.length < 4) optionsArr.push("Đáp án " + Math.random().toString(36).substr(2,5)); optionsArr.sort(() => Math.random() - 0.5); 
+    vCurrentQuestion = { item: targetItem, type, correct: correctAnswer }; 
+    optionsArr = [...new Set(optionsArr)]; 
+    while(optionsArr.length < 4) optionsArr.push("Đáp án " + Math.random().toString(36).substr(2,5)); 
+    optionsArr.sort(() => Math.random() - 0.5); 
     
-    document.getElementById('vocab-hint').innerText = hint; document.getElementById('vocab-question-text').innerText = questionText;
-    const optsContainer = document.getElementById('vocab-options-container'); optsContainer.innerHTML = '';
+    document.getElementById('vocab-hint').innerText = hint; 
+    document.getElementById('vocab-question-text').innerText = questionText;
+    
+    // --- KHÚC CHÈN NÚT CÀI ĐẶT VÀ THANH THỜI GIAN ---
+    const cardEl = document.getElementById('vocab-question-card');
+    cardEl.style.position = 'relative'; 
+    
+    if(!document.getElementById('vocab-settings-btn')) {
+        cardEl.insertAdjacentHTML('afterbegin', `<button id="vocab-settings-btn" class="vocab-settings-btn" onclick="showVocabSettings()" title="Tùy chọn">⚙️</button>`);
+    }
+
+    let timerContainer = document.querySelector('.vocab-timer-container');
+    if (!timerContainer) {
+        cardEl.insertAdjacentHTML('afterbegin', `<div class="vocab-timer-container"><div class="vocab-timer-bar" id="vocab-timer"></div></div>`);
+        timerContainer = document.querySelector('.vocab-timer-container');
+    }
+    timerContainer.style.display = vSettings.timer ? 'block' : 'none';
+
+    cardEl.classList.remove('swipe-out', 'shake-animation');
+    cardEl.classList.add('swipe-in');
+    setTimeout(() => cardEl.classList.remove('swipe-in'), 400);
+
+    const optsContainer = document.getElementById('vocab-options-container');
+    optsContainer.innerHTML = '';
     
     optionsArr.slice(0, 4).forEach(opt => { 
         if(opt === '-' || opt === '') opt = "Đáp án khác";
-        let btn = document.createElement('button'); btn.className = 'option-btn'; btn.style.textAlign = 'center'; btn.style.fontWeight = 'bold'; btn.innerText = opt; btn.onclick = function() { handleVocabAnswer(this, opt); }; optsContainer.appendChild(btn); 
+        let btn = document.createElement('button'); btn.className = 'option-btn'; 
+        btn.style.textAlign = 'center'; btn.style.fontWeight = 'bold'; btn.innerText = opt; 
+        btn.onclick = function() { handleVocabAnswer(this, opt); }; 
+        optsContainer.appendChild(btn); 
     });
+
+    // Phát âm theo Tùy chọn (Chỉ đọc từ Tiếng Anh nếu là dạng câu hỏi en_vi)
+    if (vSettings.autoTTS && type === 'en_vi') {
+        try {
+            const msg = new SpeechSynthesisUtterance(targetItem.en);
+            msg.lang = 'en-US'; msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        } catch(e) {}
+    }
+
+    // Đếm giờ theo Tùy chọn
+    cancelAnimationFrame(vTimerAnimation);
+    if (vSettings.timer) {
+        vQuestionStartTime = Date.now();
+        const timerBar = document.getElementById('vocab-timer');
+        timerBar.style.width = '100%';
+        timerBar.classList.remove('hurry');
+        
+        const updateTimer = () => {
+            const percentage = Math.max(0, 100 - ((Date.now() - vQuestionStartTime) / 10000) * 100);
+            timerBar.style.width = `${percentage}%`;
+            if (percentage < 30) timerBar.classList.add('hurry');
+            if (percentage > 0 && optsContainer.style.pointerEvents !== 'none') vTimerAnimation = requestAnimationFrame(updateTimer);
+        };
+        vTimerAnimation = requestAnimationFrame(updateTimer);
+    }
 }
 
+// ==========================================
+// 3. HÀM XỬ LÝ ĐÁP ÁN (Áp dụng Tùy chọn)
+// ==========================================
 function handleVocabAnswer(btnEl, selectedOpt) {
-    document.getElementById('vocab-options-container').style.pointerEvents = 'none'; let isCorrect = selectedOpt === vCurrentQuestion.correct;
-    if (isCorrect) { btnEl.classList.add('correct-btn'); vStreak++; if (vStreak > vMaxStreak) vMaxStreak = vStreak; vScore += 10 + Math.floor(vStreak / 3) * 5; playCorrectSound(); updateVocabUI(); setTimeout(generateVocabQuestion, 1000); } 
-    else { btnEl.classList.add('incorrect-btn'); document.querySelectorAll('#vocab-options-container .option-btn').forEach(b => { if (b.innerText === vCurrentQuestion.correct) b.classList.add('correct-btn'); }); vStreak = 0; vLives--; updateVocabUI(); showVocabExplanation(); }
+    document.getElementById('vocab-options-container').style.pointerEvents = 'none';
+    cancelAnimationFrame(vTimerAnimation);
+    
+    let isCorrect = selectedOpt === vCurrentQuestion.correct;
+    const cardEl = document.getElementById('vocab-question-card');
+
+    if (isCorrect) { 
+        btnEl.classList.add('correct-btn'); 
+        vStreak++; 
+        if (vStreak > vMaxStreak) vMaxStreak = vStreak; 
+        
+        let pointsEarned = 10;
+        if (vSettings.timer) {
+            const timeTaken = Date.now() - vQuestionStartTime;
+            if (timeTaken < 3000) pointsEarned = 20;
+            else if (timeTaken < 6000) pointsEarned = 15;
+        }
+        pointsEarned += Math.floor(vStreak / 3) * 5; 
+        vScore += pointsEarned; 
+        
+        if (vSettings.effects) {
+            if (typeof showFloatingPoints === 'function') showFloatingPoints(btnEl, pointsEarned);
+            if (vStreak >= 3) {
+                if (typeof playComboSound === 'function') playComboSound(vStreak);
+                cardEl.classList.add('fever-mode');
+                if (vStreak % 5 === 0 && typeof triggerConfetti === 'function') triggerConfetti(); 
+            } else {
+                if (typeof playCorrectSound === 'function') playCorrectSound(); 
+            }
+        }
+
+        updateVocabUI(); 
+        setTimeout(() => {
+            cardEl.classList.remove('fever-mode');
+            cardEl.classList.add('swipe-out');
+            setTimeout(generateVocabQuestion, 300);
+        }, 800); 
+    } 
+    else { 
+        btnEl.classList.add('incorrect-btn'); 
+        document.querySelectorAll('#vocab-options-container .option-btn').forEach(b => { 
+            if (b.innerText === vCurrentQuestion.correct) b.classList.add('correct-btn'); 
+        }); 
+        
+        if (vSettings.effects) {
+            if (typeof playErrorSound === 'function') playErrorSound();
+            cardEl.classList.add('shake-animation');
+        }
+
+        vStreak = 0; vLives--; 
+        cardEl.classList.remove('fever-mode'); 
+        updateVocabUI(); 
+        showVocabExplanation(); 
+    }
 }
 
 function showVocabExplanation() {
@@ -2007,11 +2162,14 @@ function showVocabExplanation() {
 
 function nextVocabQuestion() {
     if (vLives <= 0) {
-        if (currentVocabTopic !== 'ALL') {
-            updateVocabRanking(currentVocabTopic, vScore, vMaxStreak);
-        }
-        document.getElementById('vocab-question-card').classList.add('hidden');
-        document.getElementById('vocab-explanation').classList.add('hidden');
+        if (currentVocabTopic !== 'ALL') updateVocabRanking(currentVocabTopic, vScore, vMaxStreak);
+        
+        // CẬP NHẬT THÀNH TÍCH CÁ NHÂN (localStorage)
+        let records = JSON.parse(localStorage.getItem('vocabRecords')) || { maxScore: 0, maxStreak: 0 };
+        if (vScore > records.maxScore) records.maxScore = vScore;
+        if (vMaxStreak > records.maxStreak) records.maxStreak = vMaxStreak;
+        localStorage.setItem('vocabRecords', JSON.stringify(records));
+
         document.getElementById('vocab-game-play-area').classList.add('hidden');
         document.getElementById('vocab-game-over').classList.remove('hidden');
         document.getElementById('vocab-final-score').innerText = vScore;
@@ -3108,7 +3266,6 @@ function openQuizFromParams() {
     const { subject, quizIndex, quizTitle } = getQueryParams();
     if (!subject) return;
 
-    // Đợi db sẵn sàng
     if (!db[subject]) {
         alert(`Môn học "${subject}" không tồn tại.`);
         goHome();
@@ -3116,12 +3273,9 @@ function openQuizFromParams() {
     }
 
     let targetQuizIndex = -1;
-
     if (quizIndex !== null) {
         const idx = parseInt(quizIndex);
-        if (!isNaN(idx) && idx >= 0 && idx < db[subject].length) {
-            targetQuizIndex = idx;
-        }
+        if (!isNaN(idx) && idx >= 0 && idx < db[subject].length) { targetQuizIndex = idx; }
     } else if (quizTitle) {
         targetQuizIndex = db[subject].findIndex(q => q.title === quizTitle);
     }
@@ -3132,62 +3286,86 @@ function openQuizFromParams() {
         return;
     }
 
+    // =========================================================
+    // KÍCH HOẠT CHẾ ĐỘ CÁCH LY
+    // =========================================================
+    isIsolatedMode = true; 
     currentSubject = subject;
     const quizData = db[subject][targetQuizIndex];
 
+    const sidebar = document.getElementById('app-sidebar');
+    const topbar = document.querySelector('.topbar');
+    const bottomNav = document.getElementById('bottom-nav');
+    if(sidebar) sidebar.style.display = 'none';
+    if(topbar) topbar.style.display = 'none';
+    if(bottomNav) bottomNav.style.display = 'none';
+
+    const dashboard = document.getElementById('app-dashboard');
+    if(dashboard) {
+        dashboard.style.margin = '0';
+        dashboard.style.width = '100vw';
+        dashboard.style.height = '100vh';
+        dashboard.style.borderRadius = '0';
+        dashboard.style.border = 'none';
+    }
+
     // =========================================================
-    // TẠO GIAO DIỆN BẢNG CHỌN CHẾ ĐỘ (MODE SELECTION MODAL)
+    // BẢNG YÊU CẦU NHẬP TÊN (GUEST LOGIN)
     // =========================================================
     const overlay = document.createElement('div'); 
     overlay.className = 'mode-selection-overlay';
-    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);";
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-main); z-index:99999; display:flex; align-items:center; justify-content:center;";
     
     const box = document.createElement('div'); 
-    box.style.cssText = "background:var(--card-bg); padding:30px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9); animation: fadeInUp 0.4s ease;";
+    box.style.cssText = "background:var(--card-bg); padding:35px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9); animation: fadeInUp 0.4s ease;";
+    
+    // Kiểm tra xem trình duyệt có nhớ tên học sinh từ lần trước không
+    const savedName = localStorage.getItem('studentName') || "";
+    const savedClass = localStorage.getItem('studentClass') || "";
     
     box.innerHTML = `
-        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Bắt đầu làm bài</h3>
-        <p style="color:var(--text-muted); margin-bottom:25px; line-height:1.5;">Đề: <strong style="color:var(--text-main);">${quizData.title}</strong><br>Bạn muốn mở đề thi này ở chế độ nào?</p>
+        <div style="font-size: 40px; margin-bottom: 10px;">👋</div>
+        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Chào mừng em!</h3>
+        <p style="color:var(--text-muted); margin-bottom:20px; line-height:1.5;">Đề thi: <strong style="color:var(--text-main);">${quizData.title}</strong></p>
         
+        <div style="text-align: left; margin-bottom: 25px;">
+            <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
+            <input type="text" id="guest-name" value="${savedName}" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
+            
+            <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Lớp (Tùy chọn):</label>
+            <input type="text" id="guest-class" value="${savedClass}" placeholder="VD: 12A5..." style="width:100%; padding: 14px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; text-align: center;">
+        </div>
+
         <div style="display:flex; flex-direction:column; gap:12px;">
-            <button id="btn-mode-practice" class="btn btn-primary" style="width:100%; justify-content:center;">
-                Luyện tập (Chữa lỗi ngay)
-            </button>
-            <button id="btn-mode-test" class="btn btn-secondary" style="width:100%; justify-content:center; border-color:var(--primary); color:var(--primary);">
-                Kiểm tra (Tính giờ & Chấm điểm)
-            </button>
-            <button id="btn-mode-cancel" class="btn btn-secondary" style="width:100%; justify-content:center; margin-top: 10px; border:none;">
-                ❌ Hủy & Về Trang chủ
-            </button>
+            <button id="btn-mode-test" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Vào Thi Ngay</button>
+            <button id="btn-mode-practice" class="btn btn-secondary" style="width:100%; justify-content:center; border-color:var(--primary); color:var(--primary);">Chế độ Luyện Tập (Không tính điểm)</button>
         </div>
     `;
     
     overlay.appendChild(box); 
     document.body.appendChild(overlay);
 
-    // =========================================================
-    // LẮNG NGHE SỰ KIỆN NÚT BẤM (EVENT LISTENERS)
-    // =========================================================
-    
-    // Nút Luyện tập -> Truyền false
-    document.getElementById('btn-mode-practice').onclick = () => {
-        document.body.removeChild(overlay);
-        startQuiz(targetQuizIndex, false);
+    // Xử lý khi học sinh bấm Bắt đầu
+    const handleStart = (isTest) => {
+        const name = document.getElementById('guest-name').value.trim();
+        const className = document.getElementById('guest-class').value.trim() || "Khách";
+        
+        if (!name) { 
+            alert("⚠️ Vui lòng nhập Họ và tên của em để Giáo viên chấm điểm nhé!"); 
+            document.getElementById('guest-name').focus();
+            return; 
+        }
+        
+        // CẬP NHẬT TÊN VÀO BỘ NHỚ: Khi hệ thống nộp bài, nó sẽ tự móc tên này ra gửi lên Sheet
+        localStorage.setItem('studentName', name);
+        localStorage.setItem('studentClass', className);
+        
+        document.body.removeChild(overlay); 
+        startQuiz(targetQuizIndex, isTest);
     };
-    
-    // Nút Kiểm tra -> Truyền true
-    document.getElementById('btn-mode-test').onclick = () => {
-        document.body.removeChild(overlay);
-        startQuiz(targetQuizIndex, true);
-    };
-    
-    // Nút Hủy -> Quay về an toàn
-    document.getElementById('btn-mode-cancel').onclick = () => {
-        document.body.removeChild(overlay);
-        // Xóa tham số trên URL đi để lần sau F5 không bị lặp lại bảng hỏi
-        window.history.replaceState({}, document.title, window.location.pathname);
-        goHome(); 
-    };
+
+    document.getElementById('btn-mode-test').onclick = () => handleStart(true);
+    document.getElementById('btn-mode-practice').onclick = () => handleStart(false);
 }
 
 function showQRCode(subject, quizIndex) {
@@ -3661,4 +3839,133 @@ function mm_livePreview() {
             document.getElementById('mm-btn-export').classList.add('hidden');
         }
     }, 500); 
+}
+
+/* ==========================================================================
+   TÍNH NĂNG IN KẾT QUẢ SAU THI (CHUẨN GIẤY A4)
+========================================================================== */
+function printQuizResult() {
+    const hsName = localStorage.getItem('studentName') || "Học sinh ẩn danh";
+    const hsClass = localStorage.getItem('studentClass') || "Không rõ";
+    const quizTitle = db[currentSubject][currentQuizIndex].title;
+    const dateStr = new Date().toLocaleString('vi-VN');
+
+    // Đếm tổng số câu hỏi thực tế (như thuật toán lúc chấm điểm)
+    let totalRealQuestions = 0;
+    currentQuizQuestions.forEach(q => {
+        if (q.type === 'reading-cluster') {
+            q.questions.forEach(sq => { if (sq.type !== 'writing') totalRealQuestions += 1; });
+        } else if (q.type !== 'writing') { totalRealQuestions += 1; }
+    });
+
+    const scoreString = `${sessionCorrectCount} / ${totalRealQuestions}`;
+
+    // XÂY DỰNG PHẦN TIÊU ĐỀ (HEADER)
+    let html = `
+        <div class="print-header" style="text-align: center; margin-bottom: 30px;">
+            <h2 style="margin: 0; font-size: 20pt; text-transform: uppercase;">KẾT QUẢ BÀI LÀM</h2>
+            <h3 style="margin: 5px 0 15px 0; font-size: 16pt;">${quizTitle}</h3>
+            <table style="width: 100%; text-align: left; font-size: 13pt; margin-top: 15px; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 60%;"><strong>Họ và tên:</strong> ${hsName}</td>
+                    <td style="width: 40%; text-align: right;"><strong>Môn học:</strong> ${currentSubject}</td>
+                </tr>
+                <tr>
+                    <td><strong>Lớp:</strong> ${hsClass}</td>
+                    <td style="text-align: right;"><strong>Ngày làm:</strong> ${dateStr}</td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: center; padding-top: 15px; font-size: 16pt;">
+                        <strong>Điểm số:</strong> <span style="font-size: 20pt; font-weight: bold;">${scoreString}</span>
+                    </td>
+                </tr>
+            </table>
+            <hr style="border: 1.5px solid black; margin-top: 20px;">
+        </div>
+        <div style="font-size: 12pt; line-height: 1.5;">
+            <h3 style="text-transform: uppercase; font-size: 14pt; margin-bottom: 15px;">Chi tiết đáp án:</h3>
+    `;
+
+    // XÂY DỰNG PHẦN NỘI DUNG TỪNG CÂU HỎI
+    sessionResultList.forEach((item) => {
+        html += `<div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #ccc; break-inside: avoid; page-break-inside: avoid;">`;
+
+        if (item.type === 'reading-cluster') {
+            html += `<div style="margin-bottom: 15px;"><strong>[Ngữ liệu / Bài đọc]:</strong><div style="border: 1px solid #000; padding: 15px; margin-top: 8px; text-align: justify; border-radius: 4px;">${formatText(item.context)}</div></div>`;
+            item.subQuestions.forEach(sq => {
+                html += generateSingleResultPrintHTML(sq);
+            });
+        } else {
+            html += generateSingleResultPrintHTML(item);
+        }
+
+        html += `</div>`;
+    });
+
+    html += `</div>`;
+
+    // Đổ nội dung vào vùng In ẩn và gọi lệnh Print của hệ điều hành
+    const printArea = document.getElementById('print-area');
+    printArea.innerHTML = html;
+
+    // Render lại công thức toán học trước khi in (Nếu có)
+    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+        MathJax.typesetPromise([printArea]).then(() => { window.print(); }).catch(err => { window.print(); });
+    } else {
+        window.print();
+    }
+}
+
+// HÀM HỖ TRỢ: DÀN TRANG CHO TỪNG LOẠI CÂU HỎI
+function generateSingleResultPrintHTML(q) {
+    let h = `<div style="margin-bottom: 15px;">`;
+    let icon = q.isCorrect ? "[✔️ ĐÚNG]" : "[❌ SAI]";
+    if (q.type === 'writing') icon = "[✍️ TỰ LUẬN]";
+
+    h += `<div style="font-weight: bold; margin-bottom: 8px;">${icon} Câu ${q.questionNum}: ${formatText(q.content)}</div>`;
+
+    if (q.type === 'writing') {
+        h += `<div style="margin-left: 20px; margin-bottom: 8px;"><strong>Bài làm:</strong><br>${q.userAnswer || 'Không có nội dung'}</div>`;
+    } else if (q.type === 'short-answer') {
+        h += `<div style="margin-left: 20px; margin-bottom: 8px;">
+                <strong>Đã điền:</strong> ${q.userAnswer || 'Bỏ trống'}<br>
+                <strong>Đáp án đúng:</strong> ${cleanOpt(q.correctAnswer)}
+              </div>`;
+    } else if (q.type === 'cluster-tf') {
+        h += `<table style="width:95%; border-collapse: collapse; margin-left: 20px; margin-bottom: 8px;" border="1">
+                <tr><th style="padding:6px; text-align: left;">Mệnh đề</th><th style="padding:6px; width: 100px; text-align:center;">Đã chọn</th><th style="padding:6px; width: 100px; text-align:center;">Đáp án</th></tr>`;
+        q.statements.forEach((stmt, j) => {
+            let uA = q.userAnswer ? q.userAnswer[j] : "";
+            let cA = stmt.correctAnswer;
+            h += `<tr>
+                    <td style="padding:6px;">${formatText(stmt.text)}</td>
+                    <td style="padding:6px; text-align:center;">${uA || '-'}</td>
+                    <td style="padding:6px; text-align:center; font-weight:bold;">${cA}</td>
+                  </tr>`;
+        });
+        h += `</table>`;
+    } else if (q.options) {
+        h += `<div style="margin-left: 20px; margin-bottom: 8px;">`;
+        const labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+        q.options.forEach((opt, idx) => {
+            let cleanO = cleanOpt(opt);
+            let isCorrectOpt = cleanO === cleanOpt(q.correctAnswer);
+            let isSelected = q.userAnswer && cleanOpt(q.userAnswer) === cleanO;
+
+            let marker = ""; let decoration = "";
+            if (isCorrectOpt) { marker = " <strong>[✔️ ĐÁP ÁN]</strong>"; }
+            if (isSelected && !isCorrectOpt) { marker = " <strong>[❌ BẠN CHỌN]</strong>"; decoration = "text-decoration: line-through;"; }
+            if (isSelected && isCorrectOpt) { marker = " <strong>[✔️ BẠN CHỌN ĐÚNG]</strong>"; }
+
+            h += `<div style="padding: 4px 0; ${decoration}"><strong>${labels[idx]}.</strong> ${cleanO}${marker}</div>`;
+        });
+        h += `</div>`;
+    }
+
+    if (q.explanation) {
+        h += `<div style="margin-left: 20px; font-style: italic; border-left: 3px solid #ccc; padding-left: 10px; margin-top: 10px;"><strong>Giải thích:</strong> ${formatText(q.explanation)}</div>`;
+    }
+
+    h += `</div>`;
+    return h;
 }

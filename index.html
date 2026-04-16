@@ -18,26 +18,7 @@
 </head>
 <body>
 
-<div id="app-intro" class="magic-intro">
-    <div id="intro-particles"></div>
-
-    <div class="intro-content">
-        <div class="brand-wrapper">
-            <span class="intro-emoji">🎓</span>
-            <h1 class="ml16">adotanhalam</h1>
-        </div>
-
-        <p class="intro-author">Made by Teus Truong</p>
-
-        <div class="welcome-box hidden" id="welcome-box">
-            <p class="welcome-text">Bắt đầu hành trình của bạn.</p>
-            <input type="text" id="hero-name-input" placeholder="Nhập tên của bạn..." maxlength="20">
-            <button class="btn-start" onclick="finishIntro()">Bắt đầu</button>
-        </div>
-    </div>
-</div>
-
-<div id="app-dashboard" class="dashboard-layout">
+<div id="app-dashboard" class="dashboard-layout hidden">
     <aside class="sidebar" id="app-sidebar">
         <div class="sidebar-header" style="margin-bottom: 40px; display: flex; align-items: center; overflow: hidden; white-space: nowrap;">
             <div style="font-size: 32px; margin-right: 10px; min-width: 40px; text-align: center;">🎓</div> 
@@ -66,6 +47,10 @@
         </nav>
 
         <div class="sidebar-footer" style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-secondary sidebar-btn" onclick="logout()" style="border: 1px solid rgba(239, 68, 68, 0.3) !important; background: rgba(239, 68, 68, 0.05) !important;">
+                <div class="icon-box logout-icon" style="color: var(--danger);"><i class="ph-duotone ph-sign-out"></i></div> 
+                <span class="menu-text" style="color: var(--danger);">Đăng xuất</span>
+            </button>
             <button class="btn btn-secondary sidebar-btn teacher-only" onclick="syncToCloud()">
                 <div class="icon-box sync-icon"><i class="ph-duotone ph-cloud-arrow-up"></i></div> <span class="menu-text">Phát sóng Cloud</span>
             </button>
@@ -202,12 +187,21 @@
 
             <div id="screen-result" class="screen hidden">
                 <h2 style="text-align: center; font-size: 32px; margin-bottom: 10px;">Tổng kết bài làm</h2>
+                
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <button class="btn btn-secondary" onclick="printQuizResult()" style="color: var(--primary); border-color: var(--primary); box-shadow: 0 4px 10px rgba(15, 77, 95, 0.1);"><i class="ph-bold ph-printer"></i> IN KẾT QUẢ CHI TIẾT</button>
+                </div>
+
                 <div class="result-summary">
                     <div class="score-box"><div class="score-label">Điểm số</div><div class="score-value" id="final-score">0/0</div></div>
                     <div class="score-box"><div class="score-label">Làm đúng</div><div class="score-value" id="correct-count" style="color: var(--success);">0</div></div>
                     <div class="score-box"><div class="score-label">Làm sai</div><div class="score-value" id="incorrect-count" style="color: var(--danger);">0</div></div>
                 </div>
-                <div id="wrong-answers-container" class="hidden"><h3 style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">Bảng phân tích:</h3><div id="wrong-answers-list"></div></div>
+                
+                <div id="wrong-answers-container" class="hidden">
+                    <h3 style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">Bảng phân tích:</h3>
+                    <div id="wrong-answers-list"></div>
+                </div>
                 
                 <div id="result-video-container" class="hidden" style="margin-top: 30px; text-align: center; background: var(--card-bg-elevated); padding: 25px; border-radius: var(--radius-xl); box-shadow: var(--shadow-soft);">
                     <h3 style="color: #ef4444; margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 10px;"><i class="ph-fill ph-youtube-logo" style="font-size: 28px;"></i> Video Bài Giảng Chữa Đề</h3>
@@ -221,6 +215,7 @@
 
                 <button class="btn btn-primary" style="width: 100%; margin-top: 30px;" onclick="exitQuiz()">Hoàn tất & Thoát</button>
             </div>
+            
 
             <div id="screen-document" class="screen hidden">
                 <h2 style="margin-top: 0;">📚 Kho Tài Liệu Phân Môn</h2>
@@ -292,11 +287,39 @@
                     </div>
 
                     <div class="bento-card bento-action">
-                        <h3>Vào Học Ngay 🚀</h3>
-                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">Chọn chủ đề để bắt đầu ôn luyện và ghi điểm.</p>
-                        <select id="vocab-topic-select" style="margin-bottom: 15px; border-color: var(--primary);"></select>
-                        <button class="btn btn-primary" style="width: 100%; font-size: 16px; padding: 15px; background: linear-gradient(135deg, var(--accent-1), #e11d48); box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);" onclick="initVocabGame()">Bắt Đầu Chiến 🎮</button>
-                    </div>
+    <h3>Vào Học Ngay 🚀</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">Chọn chủ đề và chế độ thử thách của em.</p>
+    
+    <select id="vocab-topic-select" style="margin-bottom: 15px; border-color: var(--primary);"></select>
+
+    <div style="text-align: left; background: rgba(0,0,0,0.05); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 13px; font-weight: 600;">🔊 Tự động đọc từ</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="start-set-tts" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 13px; font-weight: 600;">⏱️ Áp lực thời gian</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="start-set-timer" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; font-weight: 600;">✨ Hiệu ứng hình ảnh</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="start-set-effects" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" style="width: 100%; font-size: 16px; padding: 15px; background: linear-gradient(135deg, var(--accent-1), #e11d48); box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);" onclick="initVocabGame()">Bắt Đầu Chiến 🎮</button>
+</div>
 
                     <div class="bento-card bento-stats">
                         <h3>Thành tích Cá nhân 🏆</h3>
@@ -490,9 +513,35 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
 
 <script src="script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<div id="screen-login" class="screen hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-main); z-index: 1000000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(10px);">
+    <div class="auth-container" style="background: var(--card-bg); padding: 40px; border-radius: var(--radius-xl); box-shadow: var(--shadow-float); border: 1px solid var(--border-color); width: 100%; max-width: 420px; text-align: center;">
+        <h2 style="color: var(--primary); margin-bottom: 5px; font-size: 28px;">🎓 Study Space</h2>
+        <p style="color: var(--text-muted); margin-bottom: 25px; font-size: 14px;">Hệ thống Luyện thi Cá nhân</p>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+            <button id="tab-login" class="btn btn-primary active" style="flex: 1;" onclick="switchAuthTab('login')">Đăng Nhập</button>
+            <button id="tab-register" class="btn btn-secondary" style="flex: 1;" onclick="switchAuthTab('register')">Đăng Ký</button>
+        </div>
+        
+        <div id="form-login">
+            <input type="text" id="login-user" placeholder="Tên đăng nhập..." style="text-align: center;">
+            <input type="password" id="login-pass" placeholder="Mật khẩu..." style="text-align: center;">
+            <button id="btn-do-login" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 16px; padding: 15px;" onclick="handleLogin()">Đăng Nhập 🚀</button>
+        </div>
+        
+        <div id="form-register" class="hidden">
+            <input type="text" id="reg-fullname" placeholder="Họ và tên thật..." style="text-align: center;">
+            <input type="text" id="reg-class" placeholder="Lớp học (VD: 12A5)..." style="text-align: center;">
+            <input type="text" id="reg-user" placeholder="Tên đăng nhập (Viết liền, không dấu)..." style="text-align: center;">
+            <input type="password" id="reg-pass" placeholder="Mật khẩu..." style="text-align: center;">
+            <button id="btn-do-register" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 16px; padding: 15px;" onclick="handleRegister()">Gửi Yêu Cầu Đăng Ký</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
