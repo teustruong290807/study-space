@@ -1323,6 +1323,23 @@ function showResults() {
         document.getElementById('result-video-iframe').src = "";
     }
 
+    // BỔ SUNG: Kiểm soát nút Thoát dựa trên chế độ Cách ly
+    const exitBtn = document.querySelector('#screen-result button[onclick="exitQuiz()"]');
+    if (exitBtn) {
+        if (isIsolatedMode) {
+            // Đổi nút Thoát thành nút Chơi Lại nếu đang bị "Nhốt"
+            exitBtn.innerText = "Làm lại bài này 🔄";
+            exitBtn.onclick = () => {
+                const isTest = db[currentSubject][currentQuizIndex].progress ? db[currentSubject][currentQuizIndex].progress.isTestMode : true;
+                startQuiz(currentQuizIndex, isTest); // Gọi lại chính đề này
+            };
+        } else {
+            // Trả lại nguyên trạng nếu là dùng bình thường
+            exitBtn.innerText = "Hoàn tất & Thoát";
+            exitBtn.onclick = exitQuiz;
+        }
+    }
+
     function triggerMathJaxResult() {
         if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) { MathJax.typesetPromise([document.getElementById('wrong-answers-container')]).catch((err) => console.log('MathJax error: ', err)); } else { setTimeout(triggerMathJaxResult, 100); }
     }
@@ -1933,7 +1950,7 @@ function getRandomItems(arr, count, excludeItem) { let filtered = arr.filter(ite
 let vQuestionStartTime = 0;
 let vTimerAnimation = null;
 let vSettings = JSON.parse(localStorage.getItem('vocabSettings')) || {
-    autoTTS: true,
+    autoTTS: ,
     timer: true,
     effects: true
 };
@@ -2165,7 +2182,6 @@ function nextVocabQuestion() {
     if (vLives <= 0) {
         if (currentVocabTopic !== 'ALL') updateVocabRanking(currentVocabTopic, vScore, vMaxStreak);
         
-        // CẬP NHẬT THÀNH TÍCH CÁ NHÂN (localStorage)
         let records = JSON.parse(localStorage.getItem('vocabRecords')) || { maxScore: 0, maxStreak: 0 };
         if (vScore > records.maxScore) records.maxScore = vScore;
         if (vMaxStreak > records.maxStreak) records.maxStreak = vMaxStreak;
@@ -2175,6 +2191,19 @@ function nextVocabQuestion() {
         document.getElementById('vocab-game-over').classList.remove('hidden');
         document.getElementById('vocab-final-score').innerText = vScore;
         document.getElementById('vocab-final-streak').innerText = vMaxStreak;
+
+        // BỔ SUNG: Kiểm soát nút Chơi Lại ở Game Từ Vựng
+        const replayBtn = document.querySelector('#vocab-game-over button');
+        if (replayBtn) {
+            if (isIsolatedMode) {
+                // Nếu bị nhốt: Bỏ qua màn hình Chọn Chủ đề, bắt ép chơi lại chính chủ đề hiện tại
+                replayBtn.onclick = startVocabGame; 
+            } else {
+                // Bình thường: Đưa về màn hình chọn chủ đề
+                replayBtn.onclick = openVocabGame;
+            }
+        }
+
     } else {
         generateVocabQuestion();
     }
