@@ -4022,7 +4022,7 @@ function executePrintVocab() {
         printTitle = "TẤT CẢ TỪ VỰNG";
     } else {
         listToPrint = db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
-        printTitle = `CHỦ ĐỀ: ${topic.toUpperCase()}`;
+        printTitle = `${topic.toUpperCase()}`;
     }
 
     // 2. THUẬT TOÁN PHÂN LOẠI & SẮP XẾP A-Z (Đã sửa lỗi sắp xếp tiếng Việt)
