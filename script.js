@@ -3969,3 +3969,124 @@ function generateSingleResultPrintHTML(q) {
     h += `</div>`;
     return h;
 }
+
+/* ==========================================================================
+   TÍNH NĂNG IN TỪ VỰNG (THEO CHỦ ĐỀ) - ĐÁNH STT & MÀU XANH ĐẬM
+========================================================================== */
+function openPrintVocabModal() {
+    if (!db.Vocabulary || db.Vocabulary.length === 0) {
+        alert("⚠️ Kho từ vựng đang trống! Bạn cần thêm từ vựng trước khi in.");
+        return;
+    }
+
+    // Lọc ra các chủ đề duy nhất đang có trong hệ thống
+    const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))];
+
+    // Tạo màn đen mờ
+    const overlay = document.createElement('div');
+    overlay.id = 'vocab-print-modal';
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);";
+
+    const box = document.createElement('div');
+    box.style.cssText = "background:var(--card-bg); padding:25px; border-radius:16px; border:1px solid var(--border-color); width:90%; max-width:400px; text-align:left; animation: fadeInUp 0.3s ease;";
+
+    let optionsHtml = `<option value="ALL">🌟 In Toàn bộ kho từ vựng</option>`;
+    topics.forEach(t => { optionsHtml += `<option value="${t}">📁 Chủ đề: ${t}</option>`; });
+
+    box.innerHTML = `
+        <h3 style="margin-top:0; color:var(--text-main); font-size:22px; text-align:center; margin-bottom: 15px;">🖨️ In Danh Sách Từ Vựng</h3>
+        <p style="color:var(--text-muted); font-size:14px; margin-bottom: 15px;">Chọn chủ đề bạn muốn xuất ra bản in PDF / Giấy A4:</p>
+        <select id="print-vocab-topic" style="width: 100%; border-color: var(--primary); margin-bottom: 25px;">
+            ${optionsHtml}
+        </select>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="document.getElementById('vocab-print-modal').remove()">Hủy</button>
+            <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="executePrintVocab()">Tiến hành In</button>
+        </div>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+function executePrintVocab() {
+    const topic = document.getElementById('print-vocab-topic').value;
+    document.getElementById('vocab-print-modal').remove(); // Đóng Modal
+
+    let listToPrint = [];
+    let printTitle = "";
+
+    // Lọc từ vựng theo chủ đề
+    if (topic === "ALL") {
+        listToPrint = db.Vocabulary;
+        printTitle = "TẤT CẢ TỪ VỰNG";
+    } else {
+        listToPrint = db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
+        printTitle = `CHỦ ĐỀ: ${topic.toUpperCase()}`;
+    }
+
+    // Đảo ngược mảng để in từ mới thêm trước, hoặc in thuận tùy ý (ở đây giữ nguyên mảng)
+    // listToPrint = [...listToPrint].reverse(); 
+
+    // Bắt đầu xây dựng giao diện in (Header + Table)
+    let html = `
+        <div class="print-header" style="text-align: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+            <h3 style="margin: 5px 0 10px 0; font-size: 16pt;">${printTitle}</h3>
+            <p style="font-size: 12pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} từ vựng/cấu trúc</p>
+            <hr style="border: 1.5px solid black; margin-top: 15px; margin-bottom: 15px;">
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+            <thead>
+                <tr>
+                    <th style="border: 1px solid #000; padding: 10px; width: 6%; text-align: center;">STT</th>
+                    <th style="border: 1px solid #000; padding: 10px; width: 40%; text-align: left;">Từ vựng / Cấu trúc</th>
+                    <th style="border: 1px solid #000; padding: 10px; width: 54%; text-align: left;">Nghĩa & Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Lặp qua từng từ để xuất HTML
+    listToPrint.forEach((item, index) => {
+        let enWord = item.en || "";
+        let typeText = item.type === 'structure' ? '<b>[Cấu trúc]</b>' : '';
+        let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif;">${item.ipa}</span>` : '';
+        let pos = item.pos ? `<i>${item.pos}</i>` : '';
+
+        // Ghép phần đồng nghĩa / trái nghĩa
+        let notes = [];
+        if (item.syn && item.syn !== '-') notes.push(`<b>Đồng nghĩa:</b> ${item.syn}`);
+        if (item.ant && item.ant !== '-') notes.push(`<b>Trái nghĩa:</b> ${item.ant}`);
+        let notesHtml = notes.length > 0 ? `<br><span style="font-size: 11pt; color: #444;">${notes.join(' | ')}</span>` : '';
+
+        html += `
+            <tr style="page-break-inside: avoid;">
+                <td style="border: 1px solid #000; padding: 10px; text-align: center; font-weight: bold;">${index + 1}</td>
+                <td style="border: 1px solid #000; padding: 10px;">
+                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 15pt;">${enWord}</strong>
+                    <div style="font-size: 11pt; margin-top: 4px;">${typeText} ${pos} ${ipa}</div>
+                </td>
+                <td style="border: 1px solid #000; padding: 10px; font-size: 14pt;">
+                    <b>${item.vi}</b>
+                    ${notesHtml}
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <div style="text-align: center; margin-top: 30px; font-weight: bold; font-size: 14pt;">--- HẾT ---</div>
+    `;
+
+    // Chèn vào khu vực in và gọi lệnh in
+    const printArea = document.getElementById('print-area');
+    printArea.innerHTML = html;
+    
+    // Đợi 100ms để trình duyệt kịp render CSS xanh đậm rồi mới bung hộp thoại in
+    setTimeout(() => {
+        window.print();
+    }, 100);
+}
