@@ -254,14 +254,17 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                     <h3 style="margin: 0;">Danh sách (<span id="vocab-total-count">0</span>)</h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <div id="vocab-select-all-container" class="hidden" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <input type="checkbox" id="vocab-select-all" onchange="toggleSelectAllVocab()" style="margin: 0; width: 16px; height: 16px; cursor: pointer;">
-                            <label for="vocab-select-all" style="font-size: 14px; margin: 0; cursor: pointer; font-weight: bold; color: var(--primary);">Chọn hết</label>
-                        </div>
+    <button class="btn btn-secondary btn-sm" onclick="openPrintVocabModal()" style="color: var(--primary); border-color: var(--primary);">
+        <i class="ph-bold ph-printer"></i> In Từ Vựng
+    </button>
+    <div id="vocab-select-all-container" class="hidden" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <input type="checkbox" id="vocab-select-all" onchange="toggleSelectAllVocab()" style="margin: 0; width: 16px; height: 16px; cursor: pointer;">
+        <label for="vocab-select-all" style="font-size: 14px; margin: 0; cursor: pointer; font-weight: bold; color: var(--primary);">Chọn hết</label>
+    </div>
 
-                        <button id="btn-toggle-bulk" class="btn btn-secondary btn-sm" onclick="toggleVocabBulkDelete()">Chọn nhiều</button>
-                        <button id="btn-confirm-bulk" class="btn btn-danger btn-sm hidden" onclick="deleteSelectedVocabs()">Xóa đã chọn</button>
-                    </div>
+    <button id="btn-toggle-bulk" class="btn btn-secondary btn-sm" onclick="toggleVocabBulkDelete()">Chọn nhiều</button>
+    <button id="btn-confirm-bulk" class="btn btn-danger btn-sm hidden" onclick="deleteSelectedVocabs()">Xóa đã chọn</button>
+</div>
                 </div>
                 <div id="vocab-manage-list"></div>
             </div>
