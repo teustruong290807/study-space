@@ -1950,7 +1950,7 @@ function getRandomItems(arr, count, excludeItem) { let filtered = arr.filter(ite
 let vQuestionStartTime = 0;
 let vTimerAnimation = null;
 let vSettings = JSON.parse(localStorage.getItem('vocabSettings')) || {
-    autoTTS: ,
+    autoTTS: false,
     timer: true,
     effects: true
 };
@@ -2375,7 +2375,6 @@ async function fetchCloudData() {
             localStorage.setItem('myStudyData', JSON.stringify(db));
         }
     } catch(e) { console.log("Không thể tải Cloud, đang dùng dữ liệu lưu trữ tạm trên máy."); }
-    goHome();
 }
 
 async function fetchUserProgress() {
