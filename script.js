@@ -80,11 +80,12 @@ window.onload = function() {
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     const introScreen = document.getElementById('app-intro');
     
-    // KIỂM TRA ĐƯỜNG LINK (Gồm bài thi HOẶC bài từ vựng)
+    // 1. KIỂM TRA ĐƯỜNG LINK CÓ CHỨA BÀI TẬP HOẶC TỪ VỰNG KHÔNG?
     const params = new URLSearchParams(window.location.search);
     const hasQuizParams = params.has('subject') && (params.has('quizTitle') || params.has('quizIndex'));
-    const hasVocabParams = params.has('vocabTopic'); // <-- Đã bổ sung cái này
+    const hasVocabParams = params.has('vocabTopic'); // <-- ĐÃ BỔ SUNG CHÌA KHÓA NÀY
 
+    // CHO PHÉP ĐI QUA NẾU: Đã đăng nhập HOẶC Có link làm bài/link từ vựng
     if (isLoggedIn === 'true' || hasQuizParams || hasVocabParams) {
         if (introScreen) introScreen.classList.add('hidden');
         const loginScreen = document.getElementById('screen-login');
@@ -94,17 +95,18 @@ window.onload = function() {
         const userNameDisplay = document.getElementById('display-user-name');
         if (userNameDisplay) userNameDisplay.innerText = heroName;
 
+        // 2. ĐIỀU HƯỚNG CHÍNH XÁC VÀO TRANG CẦN THIẾT
         if (typeof CLOUD_API_URL !== 'undefined' && CLOUD_API_URL !== '') {
             document.getElementById('app-title').innerText = "Đang tải dữ liệu...";
             fetchCloudData().then(() => {
                 fetchUserProgress();
                 if (hasQuizParams) openQuizFromParams();
-                else if (hasVocabParams) openVocabGameFromParams(); // <-- Đã bổ sung
+                else if (hasVocabParams) openVocabGameFromParams(); // <-- ĐẨY VÀO GAME TỪ VỰNG
                 else goHome();
             });
         } else {
             if (hasQuizParams) setTimeout(() => openQuizFromParams(), 500);
-            else if (hasVocabParams) setTimeout(() => openVocabGameFromParams(), 500); // <-- Đã bổ sung
+            else if (hasVocabParams) setTimeout(() => openVocabGameFromParams(), 500); // <-- ĐẨY VÀO GAME TỪ VỰNG
             else goHome();
         }
     } else {
@@ -4127,4 +4129,58 @@ function executePrintVocab() {
         // Lệnh an toàn: Dù mạng có bị treo, sau tối đa 1.5 giây hộp thoại in vẫn sẽ hiện lên
         setTimeout(triggerPrint, 1500); 
     }
+}
+
+function openVocabGameFromParams() {
+    const params = new URLSearchParams(window.location.search);
+    const topic = params.get('vocabTopic');
+
+    if (!db.Vocabulary || db.Vocabulary.length === 0) {
+        alert("Kho từ vựng trống."); goHome(); return;
+    }
+
+    // Cách ly giao diện (Tắt menu, bật toàn màn hình)
+    isIsolatedMode = true;
+    document.getElementById('app-sidebar').style.display = 'none';
+    document.querySelector('.topbar').style.display = 'none';
+    const bottomNav = document.getElementById('bottom-nav');
+    if(bottomNav) bottomNav.style.display = 'none';
+    
+    const dashboard = document.getElementById('app-dashboard');
+    dashboard.style.margin = '0'; dashboard.style.width = '100vw'; dashboard.style.height = '100vh'; dashboard.style.borderRadius = '0'; dashboard.style.border = 'none';
+
+    // Bảng yêu cầu nhập tên
+    const overlay = document.createElement('div');
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-main); z-index:99999; display:flex; align-items:center; justify-content:center;";
+    const box = document.createElement('div');
+    box.style.cssText = "background:var(--card-bg); padding:35px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9); animation: fadeInUp 0.4s ease;";
+
+    const savedName = localStorage.getItem('studentName') || "";
+
+    box.innerHTML = `
+        <div style="font-size: 40px; margin-bottom: 10px;">🎮</div>
+        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Game Từ Vựng!</h3>
+        <p style="color:var(--text-muted); margin-bottom:20px; line-height:1.5;">Chủ đề: <strong style="color:var(--text-main);">${topic === 'ALL' ? 'Tất cả' : topic}</strong></p>
+        <div style="text-align: left; margin-bottom: 25px;">
+            <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
+            <input type="text" id="guest-name" value="${savedName}" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
+        </div>
+        <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Bắt Đầu Chiến</button>
+    `;
+
+    overlay.appendChild(box); document.body.appendChild(overlay);
+
+    document.getElementById('btn-start-vocab-guest').onclick = () => {
+        const name = document.getElementById('guest-name').value.trim();
+        if (!name) { alert("⚠️ Vui lòng nhập tên của em nhé!"); document.getElementById('guest-name').focus(); return; }
+        localStorage.setItem('studentName', name);
+        document.body.removeChild(overlay);
+
+        // Mở game và tự động chiến
+        openVocabGame();
+        setTimeout(() => {
+            const select = document.getElementById('vocab-topic-select');
+            if (select) { select.value = topic; initVocabGame(); }
+        }, 100);
+    };
 }
