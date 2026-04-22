@@ -3946,7 +3946,6 @@ function printQuizResult() {
     }
 }
 
-// HÀM HỖ TRỢ: DÀN TRANG CHO TỪNG LOẠI CÂU HỎI
 function generateSingleResultPrintHTML(q) {
     let h = `<div style="margin-bottom: 15px;">`;
     let icon = q.isCorrect ? "[✔️ ĐÚNG]" : "[❌ SAI]";
@@ -4001,163 +4000,43 @@ function generateSingleResultPrintHTML(q) {
 }
 
 /* ==========================================================================
-   TÍNH NĂNG IN TỪ VỰNG (THEO CHỦ ĐỀ) - ĐÁNH STT & MÀU XANH ĐẬM
+   TÍNH NĂNG CHIA SẺ MÃ QR VÀ LINK CHO GAME TỪ VỰNG
 ========================================================================== */
-function openPrintVocabModal() {
-    if (!db.Vocabulary || db.Vocabulary.length === 0) {
-        alert("⚠️ Kho từ vựng đang trống! Bạn cần thêm từ vựng trước khi in.");
-        return;
-    }
-
-    // Lọc ra các chủ đề duy nhất đang có trong hệ thống
-    const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))];
-
-    // Tạo màn đen mờ
-    const overlay = document.createElement('div');
-    overlay.id = 'vocab-print-modal';
-    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);";
-
-    const box = document.createElement('div');
-    box.style.cssText = "background:var(--card-bg); padding:25px; border-radius:16px; border:1px solid var(--border-color); width:90%; max-width:400px; text-align:left; animation: fadeInUp 0.3s ease;";
-
-    let optionsHtml = `<option value="ALL">🌟 In Toàn bộ kho từ vựng</option>`;
-    topics.forEach(t => { optionsHtml += `<option value="${t}">📁 Chủ đề: ${t}</option>`; });
-
-    box.innerHTML = `
-        <h3 style="margin-top:0; color:var(--text-main); font-size:22px; text-align:center; margin-bottom: 15px;">🖨️ In Danh Sách Từ Vựng</h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom: 15px;">Chọn chủ đề bạn muốn xuất ra bản in PDF / Giấy A4:</p>
-        <select id="print-vocab-topic" style="width: 100%; border-color: var(--primary); margin-bottom: 25px;">
-            ${optionsHtml}
-        </select>
-        <div style="display:flex; gap:10px;">
-            <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="document.getElementById('vocab-print-modal').remove()">Hủy</button>
-            <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="executePrintVocab()">Tiến hành In</button>
-        </div>
-    `;
-
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-}
-
-function executePrintVocab() {
-    const topic = document.getElementById('print-vocab-topic').value;
-    document.getElementById('vocab-print-modal').remove(); 
-
-    let listToPrint = [];
-    let printTitle = "";
-
-    // 1. Lọc và đặt tiêu đề
-    if (topic === "ALL") {
-        listToPrint = db.Vocabulary;
-        printTitle = "TẤT CẢ TỪ VỰNG";
-    } else {
-        listToPrint = db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
-        printTitle = `${topic.toUpperCase()}`;
-    }
-
-    // 2. Sắp xếp A-Z
-    listToPrint.sort((a, b) => {
-        let typeA = a.type === 'structure' ? 'structure' : 'word';
-        let typeB = b.type === 'structure' ? 'structure' : 'word';
-        if (typeA !== typeB) return typeA === 'word' ? -1 : 1;
-
-        let enA = (a.en || "").trim().toLowerCase();
-        let enB = (b.en || "").trim().toLowerCase();
-        return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
-    });
-
-    // Tạo link cho ảnh QR
+function shareVocabQR() {
+    const topic = document.getElementById('vocab-topic-select').value;
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
-
-    // 3. XÂY DỰNG GIAO DIỆN BẢN IN (Dùng Flexbox chia cột, KHÔNG dùng Absolute nữa)
-    let html = `
-        <div class="print-header" style="margin-bottom: 10px; font-family: Arial, sans-serif;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                
-                <div style="width: 80px;"></div>
-
-                <div style="flex: 1; text-align: center;">
-                    <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-                    <h3 style="margin: 4px 0; font-size: 12pt;">${printTitle}</h3>
-                    <p style="font-size: 10pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
-                </div>
-                
-                <div style="width: 80px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
-                    <img id="print-qr-img" src="${qrImgUrl}" style="width: 65px; height: 65px; display: block; border: 1px solid #ccc; padding: 2px; background: #fff;" crossorigin="anonymous">
-                    <div style="font-family: Arial, Helvetica, sans-serif !important; font-size: 7.5pt; font-weight: bold; margin-top: 4px; color: #000; letter-spacing: 0; line-height: 1.2;">QUÉT ĐỂ CHƠI</div>
-                </div>
-
-            </div>
-            <hr style="border: 0.5px solid black; margin-top: 8px; margin-bottom: 8px;">
-        </div>
-
-        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
-            <thead>
-                <tr style="background-color: #f9f9f9;">
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
-                </tr>
-            </thead>
-            <tbody>
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'qr-modal-overlay';
+    overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `background: var(--card-bg); padding: 30px; border-radius: 24px; border: 1px solid var(--border-color); text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.5);`;
+    
+    let topicName = topic === 'ALL' ? 'Tất cả từ vựng' : `Chủ đề: ${topic}`;
+    modal.innerHTML = `
+        <h3 style="margin-top:0; color: var(--primary);">Quét QR để Luyện Từ Vựng</h3>
+        <p style="font-size:14px; color: var(--text-muted);">${topicName}</p>
+        <div id="vocab-qrcode-container" style="background: white; padding: 15px; border-radius: 16px; display: inline-block; margin: 15px 0;"></div>
+        <p style="font-size:12px; word-break: break-all; color: var(--text-muted);">${shareUrl}</p>
+        <button class="btn btn-primary" style="margin-top:15px; width:100%;" onclick="this.closest('.qr-modal-overlay').remove()">Đóng</button>
     `;
-
-    let currentCategory = "";
-    let itemCounter = 1;
     
-    listToPrint.forEach((item) => {
-        let itemType = item.type === 'structure' ? 'structure' : 'word';
-        if (itemType !== currentCategory) {
-            let catName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ';
-            html += `<tr style="background-color: #f1f5f9;"><td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; font-size: 10.5pt;">${catName}</td></tr>`;
-            currentCategory = itemType;
-            itemCounter = 1; 
-        }
-
-        html += `
-            <tr style="page-break-inside: avoid;">
-                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${itemCounter}</td>
-                <td style="border: 1px solid #000; padding: 4px 6px;">
-                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${item.en}</strong>
-                    <div style="font-size: 9pt; margin-top: 1px;">${item.pos || ''} ${item.ipa || ''}</div>
-                </td>
-                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
-                    <b>${item.vi}</b>
-                    ${(item.syn || item.ant) ? `<br><span style="font-size: 9.5pt; color: #444;">${item.syn && item.syn!=='-' ? 'Đồng nghĩa: '+item.syn : ''} ${(item.syn && item.syn!=='-' && item.ant && item.ant!=='-') ? ' | ' : ''}${item.ant && item.ant!=='-' ? 'Trái nghĩa: '+item.ant : ''}</span>` : ''}
-                </td>
-            </tr>
-        `;
-        itemCounter++;
-    });
-
-    html += `</tbody></table><div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt;">--- HẾT ---</div>`;
-
-    const printArea = document.getElementById('print-area');
-    printArea.innerHTML = html;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
     
-    // 4. LÔ-GÍC CHỜ ẢNH TẢI XONG MỚI BẬT LỆNH IN (Tuyệt đối không bị trắng ảnh)
-    const qrImgElement = document.getElementById('print-qr-img');
-    let printTriggered = false;
-
-    const triggerPrint = () => {
-        if (!printTriggered) {
-            printTriggered = true;
-            window.print();
-        }
-    };
-
-    // Kiểm tra xem ảnh đã tải xong chưa, nếu xong rồi thì in luôn
-    if (qrImgElement.complete) {
-        triggerPrint();
+    const container = modal.querySelector('#vocab-qrcode-container');
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(container, { text: shareUrl, width: 220, height: 220, colorDark: "#0F4D5F", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L });
     } else {
-        // Nếu chưa xong, chờ nó tải. Tải xong hoặc tải lỗi đều gọi lệnh in.
-        qrImgElement.onload = triggerPrint;
-        qrImgElement.onerror = triggerPrint; 
-        // Lệnh an toàn: Dù mạng có bị treo, sau tối đa 1.5 giây hộp thoại in vẫn sẽ hiện lên
-        setTimeout(triggerPrint, 1500); 
+        const img = document.createElement('img');
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
+        img.style.borderRadius = "8px";
+        container.appendChild(img);
     }
+    
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
 function openVocabGameFromParams() {
@@ -4176,7 +4055,9 @@ function openVocabGameFromParams() {
     if(bottomNav) bottomNav.style.display = 'none';
     
     const dashboard = document.getElementById('app-dashboard');
-    dashboard.style.margin = '0'; dashboard.style.width = '100vw'; dashboard.style.height = '100vh'; dashboard.style.borderRadius = '0'; dashboard.style.border = 'none';
+    if(dashboard) {
+        dashboard.style.margin = '0'; dashboard.style.width = '100vw'; dashboard.style.height = '100vh'; dashboard.style.borderRadius = '0'; dashboard.style.border = 'none';
+    }
 
     // Bảng yêu cầu nhập tên
     const overlay = document.createElement('div');
