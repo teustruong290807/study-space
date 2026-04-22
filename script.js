@@ -4035,72 +4035,98 @@ function executePrintVocab() {
         return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
     });
 
-    // Tạo link cho QR Code
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
-    const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
 
-    // 3. Xây dựng giao diện in
-    let html = `
-        <div class="print-header" style="position: relative; text-align: center; margin-bottom: 10px; font-family: Arial, sans-serif;">
-            
-            <div id="print-qr-wrapper" style="position: absolute; top: 0; right: 0; width: 90px; text-align: center;">
-                <img src="${qrImageSrc}" style="width: 65px; height: 65px; margin: 0 auto; display: block; background: #fff; padding: 2px; border: 1px solid #ccc; box-sizing: border-box;">
-                <div style="font-size: 6.5pt; font-weight: bold; margin-top: 4px; color: #000; white-space: nowrap;">QUÉT ĐỂ CHƠI</div>
-            </div>
+    // 3. TUYỆT CHIÊU CUỐI: TẠO MÃ QR OFFLINE TRỰC TIẾP TRONG BỘ NHỚ (BASE 64)
+    // Tự động vẽ một mã QR trên nền tảng ẩn mà không cần dùng mạng
+    const tempQrDiv = document.createElement('div');
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(tempQrDiv, {
+            text: shareUrl,
+            width: 120,
+            height: 120,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.L
+        });
+    }
 
-            <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-            <h3 style="margin: 4px 0; font-size: 12pt;">${printTitle}</h3>
-            <p style="font-size: 10pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
-            <hr style="border: 0.5px solid black; margin-top: 8px; margin-bottom: 8px;">
-        </div>
-
-        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
-            <thead>
-                <tr style="background-color: #f9f9f9;">
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    let currentCategory = "";
-    let itemCounter = 1;
-    
-    listToPrint.forEach((item) => {
-        let itemType = item.type === 'structure' ? 'structure' : 'word';
-        if (itemType !== currentCategory) {
-            let catName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ';
-            html += `<tr style="background-color: #f1f5f9;"><td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; font-size: 10.5pt;">${catName}</td></tr>`;
-            currentCategory = itemType;
-            itemCounter = 1; 
+    // Chờ 50ms để thư viện vẽ xong rồi rút xuất dữ liệu
+    setTimeout(() => {
+        let qrImageBase64 = "";
+        let canvas = tempQrDiv.querySelector('canvas');
+        if (canvas) {
+            // Biến mã QR thành chuỗi dữ liệu (Data URL) để dán thẳng vào bản in (Không bao giờ bị lỗi trắng ảnh)
+            qrImageBase64 = canvas.toDataURL("image/png"); 
+        } else {
+            qrImageBase64 = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(shareUrl)}`;
         }
 
-        html += `
-            <tr style="page-break-inside: avoid;">
-                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${itemCounter}</td>
-                <td style="border: 1px solid #000; padding: 4px 6px;">
-                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${item.en}</strong>
-                    <div style="font-size: 9pt; margin-top: 1px;">${item.pos || ''} ${item.ipa || ''}</div>
-                </td>
-                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
-                    <b>${item.vi}</b>
-                    ${(item.syn || item.ant) ? `<br><span style="font-size: 9.5pt; color: #444;">${item.syn && item.syn!=='-' ? 'Đồng nghĩa: '+item.syn : ''} ${(item.syn && item.syn!=='-' && item.ant && item.ant!=='-') ? '| ' : ''}${item.ant && item.ant!=='-' ? 'Trái nghĩa: '+item.ant : ''}</span>` : ''}
-                </td>
-            </tr>
+        renderAndPrint(qrImageBase64);
+    }, 50);
+
+    // 4. XÂY DỰNG GIAO DIỆN BẢN IN
+    function renderAndPrint(qrDataSrc) {
+        let html = `
+            <div class="print-header" style="position: relative; text-align: center; margin-bottom: 10px; font-family: Arial, sans-serif;">
+                
+                <div id="print-qr-wrapper" style="position: absolute; top: 0; right: 0; width: 80px; display: flex; flex-direction: column; align-items: center;">
+                    <img src="${qrDataSrc}" style="width: 65px; height: 65px; display: block; border: 1px solid #000; padding: 2px;">
+                    <span style="font-size: 7.5pt; font-weight: 900; margin-top: 4px; color: #000; white-space: nowrap; letter-spacing: -0.2px;">QUÉT ĐỂ CHƠI</span>
+                </div>
+
+                <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+                <h3 style="margin: 4px 0; font-size: 12pt;">${printTitle}</h3>
+                <p style="font-size: 10pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
+                <hr style="border: 0.5px solid black; margin-top: 8px; margin-bottom: 8px;">
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
+                <thead>
+                    <tr style="background-color: #f9f9f9;">
+                        <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
+                        <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
+                        <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
-        itemCounter++;
-    });
 
-    html += `</tbody></table><div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt;">--- HẾT ---</div>`;
+        let currentCategory = "";
+        let itemCounter = 1;
+        
+        listToPrint.forEach((item) => {
+            let itemType = item.type === 'structure' ? 'structure' : 'word';
+            if (itemType !== currentCategory) {
+                let catName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ';
+                html += `<tr style="background-color: #f1f5f9;"><td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; font-size: 10.5pt;">${catName}</td></tr>`;
+                currentCategory = itemType;
+                itemCounter = 1; 
+            }
 
-    const printArea = document.getElementById('print-area');
-    printArea.innerHTML = html;
-    
-    // ĐÃ FIX: Chờ 800ms để mạng tải xong ảnh QR Code rồi mới bật lệnh in
-    setTimeout(() => { 
-        window.print(); 
-    }, 800);
+            html += `
+                <tr style="page-break-inside: avoid;">
+                    <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${itemCounter}</td>
+                    <td style="border: 1px solid #000; padding: 4px 6px;">
+                        <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${item.en}</strong>
+                        <div style="font-size: 9pt; margin-top: 1px;">${item.pos || ''} ${item.ipa || ''}</div>
+                    </td>
+                    <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
+                        <b>${item.vi}</b>
+                        ${(item.syn || item.ant) ? `<br><span style="font-size: 9.5pt; color: #444;">${item.syn && item.syn!=='-' ? 'Đồng nghĩa: '+item.syn : ''} ${(item.syn && item.syn!=='-' && item.ant && item.ant!=='-') ? ' | ' : ''}${item.ant && item.ant!=='-' ? 'Trái nghĩa: '+item.ant : ''}</span>` : ''}
+                    </td>
+                </tr>
+            `;
+            itemCounter++;
+        });
+
+        html += `</tbody></table><div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt;">--- HẾT ---</div>`;
+
+        const printArea = document.getElementById('print-area');
+        printArea.innerHTML = html;
+        
+        // Vì ảnh QR đã được nạp cứng dưới dạng Base64 (Data), ta có thể bật lệnh in ngay lập tức
+        setTimeout(() => { window.print(); }, 100);
+    }
 }
