@@ -4025,23 +4025,20 @@ function executePrintVocab() {
         printTitle = `CHỦ ĐỀ: ${topic.toUpperCase()}`;
     }
 
-    // Đảo ngược mảng để in từ mới thêm trước, hoặc in thuận tùy ý (ở đây giữ nguyên mảng)
-    // listToPrint = [...listToPrint].reverse(); 
-
-    // Bắt đầu xây dựng giao diện in (Header + Table)
+    // Bắt đầu xây dựng giao diện in - ĐÃ TỐI ƯU KHOẢNG CÁCH VÀ CỠ CHỮ
     let html = `
-        <div class="print-header" style="text-align: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 20pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-            <h3 style="margin: 5px 0 10px 0; font-size: 16pt;">${printTitle}</h3>
-            <p style="font-size: 12pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} từ vựng/cấu trúc</p>
-            <hr style="border: 1.5px solid black; margin-top: 15px; margin-bottom: 15px;">
+        <div class="print-header" style="text-align: center; margin-bottom: 10px;">
+            <h2 style="margin: 0; font-size: 16pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+            <h3 style="margin: 4px 0; font-size: 13pt;">${printTitle}</h3>
+            <p style="font-size: 11pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} từ vựng/cấu trúc</p>
+            <hr style="border: 1px solid black; margin-top: 10px; margin-bottom: 10px;">
         </div>
-        <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+        <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 11pt;">
             <thead>
                 <tr>
-                    <th style="border: 1px solid #000; padding: 10px; width: 6%; text-align: center;">STT</th>
-                    <th style="border: 1px solid #000; padding: 10px; width: 40%; text-align: left;">Từ vựng / Cấu trúc</th>
-                    <th style="border: 1px solid #000; padding: 10px; width: 54%; text-align: left;">Nghĩa & Ghi chú</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
                 </tr>
             </thead>
             <tbody>
@@ -4058,16 +4055,16 @@ function executePrintVocab() {
         let notes = [];
         if (item.syn && item.syn !== '-') notes.push(`<b>Đồng nghĩa:</b> ${item.syn}`);
         if (item.ant && item.ant !== '-') notes.push(`<b>Trái nghĩa:</b> ${item.ant}`);
-        let notesHtml = notes.length > 0 ? `<br><span style="font-size: 11pt; color: #444;">${notes.join(' | ')}</span>` : '';
+        let notesHtml = notes.length > 0 ? `<br><span style="font-size: 10pt; color: #444;">${notes.join(' | ')}</span>` : '';
 
         html += `
             <tr style="page-break-inside: avoid;">
-                <td style="border: 1px solid #000; padding: 10px; text-align: center; font-weight: bold;">${index + 1}</td>
-                <td style="border: 1px solid #000; padding: 10px;">
-                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 15pt;">${enWord}</strong>
-                    <div style="font-size: 11pt; margin-top: 4px;">${typeText} ${pos} ${ipa}</div>
+                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${index + 1}</td>
+                <td style="border: 1px solid #000; padding: 4px 6px;">
+                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${enWord}</strong>
+                    <div style="font-size: 10pt; margin-top: 2px;">${typeText} ${pos} ${ipa}</div>
                 </td>
-                <td style="border: 1px solid #000; padding: 10px; font-size: 14pt;">
+                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 12pt;">
                     <b>${item.vi}</b>
                     ${notesHtml}
                 </td>
@@ -4078,7 +4075,7 @@ function executePrintVocab() {
     html += `
             </tbody>
         </table>
-        <div style="text-align: center; margin-top: 30px; font-weight: bold; font-size: 14pt;">--- HẾT ---</div>
+        <div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 12pt;">--- HẾT ---</div>
     `;
 
     // Chèn vào khu vực in và gọi lệnh in
