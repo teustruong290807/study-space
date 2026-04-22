@@ -4025,7 +4025,7 @@ function executePrintVocab() {
         printTitle = `CHỦ ĐỀ: ${topic.toUpperCase()}`;
     }
 
-    // 2. THUẬT TOÁN PHÂN LOẠI & SẮP XẾP A-Z
+    // 2. THUẬT TOÁN PHÂN LOẠI & SẮP XẾP A-Z (Đã sửa lỗi sắp xếp tiếng Việt)
     listToPrint.sort((a, b) => {
         let typeA = a.type === 'structure' ? 'structure' : 'word';
         let typeB = b.type === 'structure' ? 'structure' : 'word';
@@ -4035,54 +4035,57 @@ function executePrintVocab() {
             return typeA === 'word' ? -1 : 1;
         }
 
-        // Ưu tiên 2: Nếu cùng loại thì xếp theo Alphabet (A-Z) của từ tiếng Anh
+        // Ưu tiên 2: Xếp theo Alphabet (A-Z) của từ tiếng Anh, loại bỏ dấu để so sánh chuẩn hơn
         let enA = (a.en || "").trim().toLowerCase();
         let enB = (b.en || "").trim().toLowerCase();
-        return enA.localeCompare(enB);
+        
+        // Sử dụng localeCompare với tùy chọn base để bỏ qua dấu câu/dấu thanh
+        return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
     });
 
-    // 3. Bắt đầu xây dựng giao diện in
+    // 3. Bắt đầu xây dựng giao diện in - Đổi font chữ phổ thông (sans-serif) và cỡ chữ 11-12pt
     let html = `
         <div class="print-header" style="text-align: center; margin-bottom: 10px;">
-            <h2 style="margin: 0; font-size: 16pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-            <h3 style="margin: 4px 0; font-size: 13pt;">${printTitle}</h3>
-            <p style="font-size: 11pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
-            <hr style="border: 1px solid black; margin-top: 10px; margin-bottom: 10px;">
+            <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase; font-family: Arial, Helvetica, sans-serif;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+            <h3 style="margin: 4px 0; font-size: 12pt; font-family: Arial, Helvetica, sans-serif;">${printTitle}</h3>
+            <p style="font-size: 11pt; margin: 0; font-style: italic; font-family: Arial, Helvetica, sans-serif;">Tổng số: ${listToPrint.length} mục</p>
+            <hr style="border: 1px solid black; margin-top: 8px; margin-bottom: 8px;">
         </div>
-        <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 11pt;">
+        <table style="width: 100%; border-collapse: collapse; font-family: Arial, Helvetica, sans-serif; font-size: 11pt; line-height: 1.4;">
             <thead>
                 <tr>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center; font-size: 11pt;">STT</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left; font-size: 11pt;">Từ vựng / Cấu trúc</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left; font-size: 11pt;">Nghĩa & Ghi chú</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    // 4. Lặp qua từng từ để xuất HTML (Có chèn Dòng phân cách loại từ)
+    // 4. Lặp qua từng từ để xuất HTML
     let currentCategory = "";
+    let itemCounter = 1; // Khởi tạo biến đếm STT
     
-    listToPrint.forEach((item, index) => {
-        // Nhận diện loại từ đang in
+    listToPrint.forEach((item) => {
         let itemType = item.type === 'structure' ? 'structure' : 'word';
         
-        // Nếu chuyển sang loại từ mới -> In ra một dòng Sub-header ngang để chia khu vực
+        // Dòng phân cách loại từ
         if (itemType !== currentCategory) {
-            let categoryName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ (STRUCTURES/PHRASES)';
+            let categoryName = itemType === 'word' ? 'TỪ ĐƠN (WORDS)' : 'CẤU TRÚC & CỤM TỪ (STRUCTURES/PHRASES)';
             html += `
                 <tr style="background-color: #f1f5f9;">
-                    <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 12pt; text-transform: uppercase;">
+                    <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 11pt; text-transform: uppercase;">
                         ${categoryName}
                     </td>
                 </tr>
             `;
-            currentCategory = itemType; // Cập nhật loại hiện tại
+            currentCategory = itemType;
+            itemCounter = 1; // Reset lại STT khi sang nhóm mới (Tùy chọn, nếu muốn đếm liên tiếp thì bỏ dòng này)
         }
 
         let enWord = item.en || "";
-        let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif;">${item.ipa}</span>` : '';
-        let pos = item.pos ? `<i>${item.pos}</i>` : '';
+        let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif; font-size: 10pt;">${item.ipa}</span>` : '';
+        let pos = item.pos ? `<i style="font-size: 10pt;">${item.pos}</i>` : '';
 
         // Ghép phần đồng nghĩa / trái nghĩa
         let notes = [];
@@ -4092,23 +4095,24 @@ function executePrintVocab() {
 
         html += `
             <tr style="page-break-inside: avoid;">
-                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${index + 1}</td>
+                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold; font-size: 11pt;">${itemCounter}</td>
                 <td style="border: 1px solid #000; padding: 4px 6px;">
                     <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${enWord}</strong>
-                    <div style="font-size: 10pt; margin-top: 2px;">${pos} ${ipa}</div>
+                    <div style="margin-top: 2px;">${pos} ${ipa}</div>
                 </td>
-                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 12pt;">
+                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
                     <b>${item.vi}</b>
                     ${notesHtml}
                 </td>
             </tr>
         `;
+        itemCounter++; // Tăng STT
     });
 
     html += `
             </tbody>
         </table>
-        <div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 12pt;">--- HẾT ---</div>
+        <div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt; font-family: Arial, Helvetica, sans-serif;">--- HẾT ---</div>
     `;
 
     // 5. Xuất ra máy in
