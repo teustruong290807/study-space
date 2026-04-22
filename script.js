@@ -4016,7 +4016,7 @@ function executePrintVocab() {
     let listToPrint = [];
     let printTitle = "";
 
-    // Lọc từ vựng theo chủ đề
+    // 1. Lọc từ vựng theo chủ đề
     if (topic === "ALL") {
         listToPrint = db.Vocabulary;
         printTitle = "TẤT CẢ TỪ VỰNG";
@@ -4025,12 +4025,28 @@ function executePrintVocab() {
         printTitle = `CHỦ ĐỀ: ${topic.toUpperCase()}`;
     }
 
-    // Bắt đầu xây dựng giao diện in - ĐÃ TỐI ƯU KHOẢNG CÁCH VÀ CỠ CHỮ
+    // 2. THUẬT TOÁN PHÂN LOẠI & SẮP XẾP A-Z
+    listToPrint.sort((a, b) => {
+        let typeA = a.type === 'structure' ? 'structure' : 'word';
+        let typeB = b.type === 'structure' ? 'structure' : 'word';
+
+        // Ưu tiên 1: Đẩy Từ vựng (word) lên trước, Cấu trúc/Cụm (structure) xuống sau
+        if (typeA !== typeB) {
+            return typeA === 'word' ? -1 : 1;
+        }
+
+        // Ưu tiên 2: Nếu cùng loại thì xếp theo Alphabet (A-Z) của từ tiếng Anh
+        let enA = (a.en || "").trim().toLowerCase();
+        let enB = (b.en || "").trim().toLowerCase();
+        return enA.localeCompare(enB);
+    });
+
+    // 3. Bắt đầu xây dựng giao diện in
     let html = `
         <div class="print-header" style="text-align: center; margin-bottom: 10px;">
             <h2 style="margin: 0; font-size: 16pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
             <h3 style="margin: 4px 0; font-size: 13pt;">${printTitle}</h3>
-            <p style="font-size: 11pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} từ vựng/cấu trúc</p>
+            <p style="font-size: 11pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
             <hr style="border: 1px solid black; margin-top: 10px; margin-bottom: 10px;">
         </div>
         <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 11pt;">
@@ -4044,10 +4060,27 @@ function executePrintVocab() {
             <tbody>
     `;
 
-    // Lặp qua từng từ để xuất HTML
+    // 4. Lặp qua từng từ để xuất HTML (Có chèn Dòng phân cách loại từ)
+    let currentCategory = "";
+    
     listToPrint.forEach((item, index) => {
+        // Nhận diện loại từ đang in
+        let itemType = item.type === 'structure' ? 'structure' : 'word';
+        
+        // Nếu chuyển sang loại từ mới -> In ra một dòng Sub-header ngang để chia khu vực
+        if (itemType !== currentCategory) {
+            let categoryName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ (STRUCTURES/PHRASES)';
+            html += `
+                <tr style="background-color: #f1f5f9;">
+                    <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 12pt; text-transform: uppercase;">
+                        ${categoryName}
+                    </td>
+                </tr>
+            `;
+            currentCategory = itemType; // Cập nhật loại hiện tại
+        }
+
         let enWord = item.en || "";
-        let typeText = item.type === 'structure' ? '<b>[Cấu trúc]</b>' : '';
         let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif;">${item.ipa}</span>` : '';
         let pos = item.pos ? `<i>${item.pos}</i>` : '';
 
@@ -4062,7 +4095,7 @@ function executePrintVocab() {
                 <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${index + 1}</td>
                 <td style="border: 1px solid #000; padding: 4px 6px;">
                     <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${enWord}</strong>
-                    <div style="font-size: 10pt; margin-top: 2px;">${typeText} ${pos} ${ipa}</div>
+                    <div style="font-size: 10pt; margin-top: 2px;">${pos} ${ipa}</div>
                 </td>
                 <td style="border: 1px solid #000; padding: 4px 6px; font-size: 12pt;">
                     <b>${item.vi}</b>
@@ -4078,11 +4111,10 @@ function executePrintVocab() {
         <div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 12pt;">--- HẾT ---</div>
     `;
 
-    // Chèn vào khu vực in và gọi lệnh in
+    // 5. Xuất ra máy in
     const printArea = document.getElementById('print-area');
     printArea.innerHTML = html;
     
-    // Đợi 100ms để trình duyệt kịp render CSS xanh đậm rồi mới bung hộp thoại in
     setTimeout(() => {
         window.print();
     }, 100);
