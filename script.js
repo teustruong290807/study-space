@@ -4093,3 +4093,171 @@ function openVocabGameFromParams() {
         }, 100);
     };
 }
+
+/* ==========================================================================
+   TÍNH NĂNG IN TỪ VỰNG (ĐÃ TỐI ƯU GIAO DIỆN & QR CODE)
+========================================================================== */
+function openPrintVocabModal() {
+    if (!db.Vocabulary || db.Vocabulary.length === 0) {
+        alert("⚠️ Kho từ vựng đang trống! Bạn cần thêm từ vựng trước khi in.");
+        return;
+    }
+
+    const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))];
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'vocab-print-modal';
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);";
+
+    const box = document.createElement('div');
+    box.style.cssText = "background:var(--card-bg); padding:25px; border-radius:16px; border:1px solid var(--border-color); width:90%; max-width:400px; text-align:left; animation: fadeInUp 0.3s ease;";
+
+    let optionsHtml = `<option value="ALL">🌟 In Toàn bộ kho từ vựng</option>`;
+    topics.forEach(t => { optionsHtml += `<option value="${t}">📁 Chủ đề: ${t}</option>`; });
+
+    box.innerHTML = `
+        <h3 style="margin-top:0; color:var(--text-main); font-size:22px; text-align:center; margin-bottom: 15px;">🖨️ In Danh Sách Từ Vựng</h3>
+        <p style="color:var(--text-muted); font-size:14px; margin-bottom: 15px;">Chọn chủ đề bạn muốn xuất ra bản in PDF / Giấy A4:</p>
+        <select id="print-vocab-topic" style="width: 100%; border-color: var(--primary); margin-bottom: 25px; padding: 10px; border-radius: 8px; font-size: 16px;">
+            ${optionsHtml}
+        </select>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="document.getElementById('vocab-print-modal').remove()">Hủy</button>
+            <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="executePrintVocab()">Tiến hành In</button>
+        </div>
+    `;
+    
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+function executePrintVocab() {
+    const topic = document.getElementById('print-vocab-topic').value;
+    document.getElementById('vocab-print-modal').remove(); 
+
+    let listToPrint = [];
+    let printTitle = "";
+
+    // 1. Lọc và đặt tiêu đề
+    if (topic === "ALL") {
+        listToPrint = db.Vocabulary;
+        printTitle = "TẤT CẢ TỪ VỰNG";
+    } else {
+        listToPrint = db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
+        printTitle = `${topic.toUpperCase()}`;
+    }
+
+    // 2. Sắp xếp A-Z
+    listToPrint.sort((a, b) => {
+        let typeA = a.type === 'structure' ? 'structure' : 'word';
+        let typeB = b.type === 'structure' ? 'structure' : 'word';
+        if (typeA !== typeB) return typeA === 'word' ? -1 : 1;
+
+        let enA = (a.en || "").trim().toLowerCase();
+        let enB = (b.en || "").trim().toLowerCase();
+        return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
+    });
+
+    // Tạo link cho ảnh QR
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
+    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+
+    // 3. XÂY DỰNG GIAO DIỆN BẢN IN
+    let html = `
+        <div class="print-header" style="margin-bottom: 10px; font-family: Arial, sans-serif;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                
+                <div style="width: 80px;"></div>
+
+                <div style="flex: 1; text-align: center;">
+                    <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+                    <h3 style="margin: 4px 0; font-size: 12pt;">${printTitle}</h3>
+                    <p style="font-size: 10pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
+                </div>
+                
+                <div style="width: 80px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
+                    <img id="print-qr-img" src="${qrImgUrl}" style="width: 65px; height: 65px; display: block; border: 1px solid #ccc; padding: 2px; background: #fff;" crossorigin="anonymous">
+                    <div style="font-family: Arial, Helvetica, sans-serif !important; font-size: 7.5pt; font-weight: bold; margin-top: 4px; color: #000; letter-spacing: 0; line-height: 1.2;">QUÉT ĐỂ CHƠI</div>
+                </div>
+
+            </div>
+            <hr style="border: 0.5px solid black; margin-top: 8px; margin-bottom: 8px;">
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
+            <thead>
+                <tr style="background-color: #f9f9f9;">
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    let currentCategory = "";
+    let itemCounter = 1;
+    
+    listToPrint.forEach((item) => {
+        let itemType = item.type === 'structure' ? 'structure' : 'word';
+        if (itemType !== currentCategory) {
+            let catName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ';
+            html += `<tr style="background-color: #f1f5f9;"><td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; font-size: 10.5pt;">${catName}</td></tr>`;
+            currentCategory = itemType;
+            itemCounter = 1; 
+        }
+
+        let enWord = item.en || "";
+        let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif; font-size: 9pt;">${item.ipa}</span>` : '';
+        let pos = item.pos ? `<i style="font-size: 9pt;">${item.pos}</i>` : '';
+
+        let notesHtml = '';
+        if (item.syn && item.syn !== '-' && item.ant && item.ant !== '-') {
+            notesHtml = `<br><span style="font-size: 9.5pt; color: #444;">Đồng nghĩa: ${item.syn} | Trái nghĩa: ${item.ant}</span>`;
+        } else if (item.syn && item.syn !== '-') {
+            notesHtml = `<br><span style="font-size: 9.5pt; color: #444;">Đồng nghĩa: ${item.syn}</span>`;
+        } else if (item.ant && item.ant !== '-') {
+            notesHtml = `<br><span style="font-size: 9.5pt; color: #444;">Trái nghĩa: ${item.ant}</span>`;
+        }
+
+        html += `
+            <tr style="page-break-inside: avoid;">
+                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${itemCounter}</td>
+                <td style="border: 1px solid #000; padding: 4px 6px;">
+                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${enWord}</strong>
+                    <div style="margin-top: 1px;">${pos} ${ipa}</div>
+                </td>
+                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
+                    <b>${item.vi}</b>
+                    ${notesHtml}
+                </td>
+            </tr>
+        `;
+        itemCounter++;
+    });
+
+    html += `</tbody></table><div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt;">--- HẾT ---</div>`;
+
+    const printArea = document.getElementById('print-area');
+    printArea.innerHTML = html;
+    
+    // 4. LÔ-GÍC CHỜ ẢNH TẢI XONG MỚI BẬT LỆNH IN
+    const qrImgElement = document.getElementById('print-qr-img');
+    let printTriggered = false;
+
+    const triggerPrint = () => {
+        if (!printTriggered) {
+            printTriggered = true;
+            window.print();
+        }
+    };
+
+    if (qrImgElement.complete) {
+        triggerPrint();
+    } else {
+        qrImgElement.onload = triggerPrint;
+        qrImgElement.onerror = triggerPrint; 
+        setTimeout(triggerPrint, 1500); 
+    }
+}
