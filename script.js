@@ -4015,7 +4015,7 @@ function executePrintVocab() {
     let listToPrint = [];
     let printTitle = "";
 
-    // 1. Lọc và đặt tiêu đề (Đã bỏ chữ "Chủ đề")
+    // 1. Lọc và đặt tiêu đề
     if (topic === "ALL") {
         listToPrint = db.Vocabulary;
         printTitle = "TẤT CẢ TỪ VỰNG";
@@ -4024,7 +4024,7 @@ function executePrintVocab() {
         printTitle = `${topic.toUpperCase()}`;
     }
 
-    // 2. Sắp xếp A-Z (Bỏ qua dấu tiếng Việt để chuẩn xác)
+    // 2. Sắp xếp A-Z
     listToPrint.sort((a, b) => {
         let typeA = a.type === 'structure' ? 'structure' : 'word';
         let typeB = b.type === 'structure' ? 'structure' : 'word';
@@ -4035,16 +4035,18 @@ function executePrintVocab() {
         return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
     });
 
-    // Tạo link dẫn đến Game cho QR Code
+    // Tạo link cho QR Code
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
+    const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
 
-    // 3. Xây dựng giao diện in (Cỡ chữ phổ thông 11-12pt)
+    // 3. Xây dựng giao diện in
     let html = `
         <div class="print-header" style="position: relative; text-align: center; margin-bottom: 10px; font-family: Arial, sans-serif;">
-            <div id="print-qr-wrapper" style="position: absolute; top: 0; right: 0; width: 70px; text-align: center;">
-                <div id="vocab-print-qr-code" style="width: 60px; height: 60px; margin: 0 auto; background: #fff; padding: 2px; border: 1px solid #ccc;"></div>
-                <div style="font-size: 6pt; font-weight: bold; margin-top: 2px;">QUÉT ĐỂ CHƠI GAME</div>
+            
+            <div id="print-qr-wrapper" style="position: absolute; top: 0; right: 0; width: 90px; text-align: center;">
+                <img src="${qrImageSrc}" style="width: 65px; height: 65px; margin: 0 auto; display: block; background: #fff; padding: 2px; border: 1px solid #ccc; box-sizing: border-box;">
+                <div style="font-size: 6.5pt; font-weight: bold; margin-top: 4px; color: #000; white-space: nowrap;">QUÉT ĐỂ CHƠI</div>
             </div>
 
             <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
@@ -4085,7 +4087,7 @@ function executePrintVocab() {
                 </td>
                 <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
                     <b>${item.vi}</b>
-                    ${(item.syn || item.ant) ? `<br><span style="font-size: 9.5pt; color: #444;">${item.syn ? 'Đồng nghĩa: '+item.syn : ''} ${item.ant ? '| Trái nghĩa: '+item.ant : ''}</span>` : ''}
+                    ${(item.syn || item.ant) ? `<br><span style="font-size: 9.5pt; color: #444;">${item.syn && item.syn!=='-' ? 'Đồng nghĩa: '+item.syn : ''} ${(item.syn && item.syn!=='-' && item.ant && item.ant!=='-') ? '| ' : ''}${item.ant && item.ant!=='-' ? 'Trái nghĩa: '+item.ant : ''}</span>` : ''}
                 </td>
             </tr>
         `;
@@ -4097,16 +4099,8 @@ function executePrintVocab() {
     const printArea = document.getElementById('print-area');
     printArea.innerHTML = html;
     
-    // GỌI HÀM TẠO QR CODE CHO BẢN IN
-    setTimeout(() => {
-        const qrBox = document.getElementById('vocab-print-qr-code');
-        if (typeof QRCode !== 'undefined') {
-            new QRCode(qrBox, { text: shareUrl, width: 60, height: 60, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L });
-        } else {
-            qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(shareUrl)}" style="width:60px;">`;
-        }
-        
-        // Đợi QR render xong rồi mới in
-        setTimeout(() => { window.print(); }, 200);
-    }, 50);
+    // ĐÃ FIX: Chờ 800ms để mạng tải xong ảnh QR Code rồi mới bật lệnh in
+    setTimeout(() => { 
+        window.print(); 
+    }, 800);
 }
