@@ -546,7 +546,7 @@ body.student-mode button[onclick^="saveNew"] {
     /* 2. ÉP LỀ 0.5 INCH VÀ KHỔ A4 */
     @page {
         size: A4;
-        margin: 0.5in !important; 
+        margin: 1cm !important; 
     }
 
     /* 3. ẨN TẤT CẢ GIAO DIỆN WEB CHỈ CHỪA LẠI VÙNG IN */
