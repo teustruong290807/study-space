@@ -4123,3 +4123,97 @@ function executePrintVocab() {
         window.print();
     }, 100);
 }
+
+/* ==========================================================================
+   TÍNH NĂNG CHIA SẺ MÃ QR VÀ LINK CHO GAME TỪ VỰNG
+========================================================================== */
+function shareVocabQR() {
+    const topic = document.getElementById('vocab-topic-select').value;
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'qr-modal-overlay';
+    overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `background: var(--card-bg); padding: 30px; border-radius: 24px; border: 1px solid var(--border-color); text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.5);`;
+    
+    let topicName = topic === 'ALL' ? 'Tất cả từ vựng' : `Chủ đề: ${topic}`;
+    modal.innerHTML = `
+        <h3 style="margin-top:0; color: var(--primary);">Quét QR để Luyện Từ Vựng</h3>
+        <p style="font-size:14px; color: var(--text-muted);">${topicName}</p>
+        <div id="vocab-qrcode-container" style="background: white; padding: 15px; border-radius: 16px; display: inline-block; margin: 15px 0;"></div>
+        <p style="font-size:12px; word-break: break-all; color: var(--text-muted);">${shareUrl}</p>
+        <button class="btn btn-primary" style="margin-top:15px; width:100%;" onclick="this.closest('.qr-modal-overlay').remove()">Đóng</button>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const container = modal.querySelector('#vocab-qrcode-container');
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(container, { text: shareUrl, width: 220, height: 220, colorDark: "#0F4D5F", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L });
+    } else {
+        const img = document.createElement('img');
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
+        img.style.borderRadius = "8px";
+        container.appendChild(img);
+    }
+    
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+function openVocabGameFromParams() {
+    const params = new URLSearchParams(window.location.search);
+    const topic = params.get('vocabTopic');
+
+    if (!db.Vocabulary || db.Vocabulary.length === 0) {
+        alert("Kho từ vựng trống."); goHome(); return;
+    }
+
+    // Cách ly giao diện (Tắt menu, bật toàn màn hình)
+    isIsolatedMode = true;
+    document.getElementById('app-sidebar').style.display = 'none';
+    document.querySelector('.topbar').style.display = 'none';
+    const bottomNav = document.getElementById('bottom-nav');
+    if(bottomNav) bottomNav.style.display = 'none';
+    
+    const dashboard = document.getElementById('app-dashboard');
+    dashboard.style.margin = '0'; dashboard.style.width = '100vw'; dashboard.style.height = '100vh'; dashboard.style.borderRadius = '0'; dashboard.style.border = 'none';
+
+    // Bảng yêu cầu nhập tên
+    const overlay = document.createElement('div');
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-main); z-index:99999; display:flex; align-items:center; justify-content:center;";
+    const box = document.createElement('div');
+    box.style.cssText = "background:var(--card-bg); padding:35px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9); animation: fadeInUp 0.4s ease;";
+
+    const savedName = localStorage.getItem('studentName') || "";
+
+    box.innerHTML = `
+        <div style="font-size: 40px; margin-bottom: 10px;">🎮</div>
+        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Game Từ Vựng!</h3>
+        <p style="color:var(--text-muted); margin-bottom:20px; line-height:1.5;">Chủ đề: <strong style="color:var(--text-main);">${topic === 'ALL' ? 'Tất cả' : topic}</strong></p>
+        <div style="text-align: left; margin-bottom: 25px;">
+            <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
+            <input type="text" id="guest-name" value="${savedName}" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
+        </div>
+        <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Bắt Đầu Chiến</button>
+    `;
+
+    overlay.appendChild(box); document.body.appendChild(overlay);
+
+    document.getElementById('btn-start-vocab-guest').onclick = () => {
+        const name = document.getElementById('guest-name').value.trim();
+        if (!name) { alert("⚠️ Vui lòng nhập tên của em nhé!"); document.getElementById('guest-name').focus(); return; }
+        localStorage.setItem('studentName', name);
+        document.body.removeChild(overlay);
+
+        // Mở game và tự động chiến
+        openVocabGame();
+        setTimeout(() => {
+            const select = document.getElementById('vocab-topic-select');
+            if (select) { select.value = topic; initVocabGame(); }
+        }, 100);
+    };
+}
