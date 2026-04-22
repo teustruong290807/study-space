@@ -70,7 +70,6 @@ function getYoutubeEmbedUrl(url) {
 }
 
 window.onload = function() { 
-    // 1. Khởi tạo giao diện cơ bản
     if (window.innerWidth <= 768) {
         const sidebar = document.getElementById('app-sidebar');
         if (sidebar) sidebar.classList.add('collapsed');
@@ -78,19 +77,18 @@ window.onload = function() {
     const themeBtn = document.getElementById('theme-btn');
     if (themeBtn) themeBtn.classList.remove('hidden');
 
-    // 2. CHỐT CHẶN BẢO MẬT: Kiểm tra định danh & Link chia sẻ
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     const introScreen = document.getElementById('app-intro');
     
-    // KIỂM TRA XEM HỌC SINH CÓ ĐANG VÀO BẰNG LINK CHIA SẺ KHÔNG?
+    // KIỂM TRA ĐƯỜNG LINK (Gồm bài thi HOẶC bài từ vựng)
     const params = new URLSearchParams(window.location.search);
     const hasQuizParams = params.has('subject') && (params.has('quizTitle') || params.has('quizIndex'));
+    const hasVocabParams = params.has('vocabTopic'); // <-- Đã bổ sung cái này
 
-    // CHO PHÉP ĐI QUA NẾU: Đã đăng nhập HOẶC Có link làm bài
-    if (isLoggedIn === 'true' || hasQuizParams) {
+    if (isLoggedIn === 'true' || hasQuizParams || hasVocabParams) {
         if (introScreen) introScreen.classList.add('hidden');
         const loginScreen = document.getElementById('screen-login');
-        if (loginScreen) loginScreen.classList.add('hidden'); // Giấu form đăng nhập đi
+        if (loginScreen) loginScreen.classList.add('hidden'); 
         
         const heroName = localStorage.getItem('studentName') || "Khách";
         const userNameDisplay = document.getElementById('display-user-name');
@@ -101,14 +99,15 @@ window.onload = function() {
             fetchCloudData().then(() => {
                 fetchUserProgress();
                 if (hasQuizParams) openQuizFromParams();
+                else if (hasVocabParams) openVocabGameFromParams(); // <-- Đã bổ sung
                 else goHome();
             });
         } else {
             if (hasQuizParams) setTimeout(() => openQuizFromParams(), 500);
+            else if (hasVocabParams) setTimeout(() => openVocabGameFromParams(), 500); // <-- Đã bổ sung
             else goHome();
         }
     } else {
-        // [CHƯA ĐĂNG NHẬP & VÀO TRANG CHỦ]: Khóa hệ thống
         if (introScreen) introScreen.classList.add('hidden'); 
         showScreen('screen-login'); 
     }
@@ -4011,12 +4010,12 @@ function openPrintVocabModal() {
 
 function executePrintVocab() {
     const topic = document.getElementById('print-vocab-topic').value;
-    document.getElementById('vocab-print-modal').remove(); // Đóng Modal
+    document.getElementById('vocab-print-modal').remove(); 
 
     let listToPrint = [];
     let printTitle = "";
 
-    // 1. Lọc từ vựng theo chủ đề
+    // 1. Lọc và đặt tiêu đề (Đã bỏ chữ "Chủ đề")
     if (topic === "ALL") {
         listToPrint = db.Vocabulary;
         printTitle = "TẤT CẢ TỪ VỰNG";
@@ -4025,195 +4024,89 @@ function executePrintVocab() {
         printTitle = `${topic.toUpperCase()}`;
     }
 
-    // 2. THUẬT TOÁN PHÂN LOẠI & SẮP XẾP A-Z (Đã sửa lỗi sắp xếp tiếng Việt)
+    // 2. Sắp xếp A-Z (Bỏ qua dấu tiếng Việt để chuẩn xác)
     listToPrint.sort((a, b) => {
         let typeA = a.type === 'structure' ? 'structure' : 'word';
         let typeB = b.type === 'structure' ? 'structure' : 'word';
+        if (typeA !== typeB) return typeA === 'word' ? -1 : 1;
 
-        // Ưu tiên 1: Đẩy Từ vựng (word) lên trước, Cấu trúc/Cụm (structure) xuống sau
-        if (typeA !== typeB) {
-            return typeA === 'word' ? -1 : 1;
-        }
-
-        // Ưu tiên 2: Xếp theo Alphabet (A-Z) của từ tiếng Anh, loại bỏ dấu để so sánh chuẩn hơn
         let enA = (a.en || "").trim().toLowerCase();
         let enB = (b.en || "").trim().toLowerCase();
-        
-        // Sử dụng localeCompare với tùy chọn base để bỏ qua dấu câu/dấu thanh
         return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
     });
 
-    // 3. Bắt đầu xây dựng giao diện in - Đổi font chữ phổ thông (sans-serif) và cỡ chữ 11-12pt
+    // Tạo link dẫn đến Game cho QR Code
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
+
+    // 3. Xây dựng giao diện in (Cỡ chữ phổ thông 11-12pt)
     let html = `
-        <div class="print-header" style="text-align: center; margin-bottom: 10px;">
-            <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase; font-family: Arial, Helvetica, sans-serif;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-            <h3 style="margin: 4px 0; font-size: 12pt; font-family: Arial, Helvetica, sans-serif;">${printTitle}</h3>
-            <p style="font-size: 11pt; margin: 0; font-style: italic; font-family: Arial, Helvetica, sans-serif;">Tổng số: ${listToPrint.length} mục</p>
-            <hr style="border: 1px solid black; margin-top: 8px; margin-bottom: 8px;">
+        <div class="print-header" style="position: relative; text-align: center; margin-bottom: 10px; font-family: Arial, sans-serif;">
+            <div id="print-qr-wrapper" style="position: absolute; top: 0; right: 0; width: 70px; text-align: center;">
+                <div id="vocab-print-qr-code" style="width: 60px; height: 60px; margin: 0 auto; background: #fff; padding: 2px; border: 1px solid #ccc;"></div>
+                <div style="font-size: 6pt; font-weight: bold; margin-top: 2px;">QUÉT ĐỂ CHƠI GAME</div>
+            </div>
+
+            <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+            <h3 style="margin: 4px 0; font-size: 12pt;">${printTitle}</h3>
+            <p style="font-size: 10pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
+            <hr style="border: 0.5px solid black; margin-top: 8px; margin-bottom: 8px;">
         </div>
-        <table style="width: 100%; border-collapse: collapse; font-family: Arial, Helvetica, sans-serif; font-size: 11pt; line-height: 1.4;">
+
+        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
             <thead>
-                <tr>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center; font-size: 11pt;">STT</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left; font-size: 11pt;">Từ vựng / Cấu trúc</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left; font-size: 11pt;">Nghĩa & Ghi chú</th>
+                <tr style="background-color: #f9f9f9;">
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
+                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    // 4. Lặp qua từng từ để xuất HTML
     let currentCategory = "";
-    let itemCounter = 1; // Khởi tạo biến đếm STT
+    let itemCounter = 1;
     
     listToPrint.forEach((item) => {
         let itemType = item.type === 'structure' ? 'structure' : 'word';
-        
-        // Dòng phân cách loại từ
         if (itemType !== currentCategory) {
-            let categoryName = itemType === 'word' ? 'TỪ ĐƠN (WORDS)' : 'CẤU TRÚC & CỤM TỪ (STRUCTURES/PHRASES)';
-            html += `
-                <tr style="background-color: #f1f5f9;">
-                    <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 11pt; text-transform: uppercase;">
-                        ${categoryName}
-                    </td>
-                </tr>
-            `;
+            let catName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ';
+            html += `<tr style="background-color: #f1f5f9;"><td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; font-size: 10.5pt;">${catName}</td></tr>`;
             currentCategory = itemType;
-            itemCounter = 1; // Reset lại STT khi sang nhóm mới (Tùy chọn, nếu muốn đếm liên tiếp thì bỏ dòng này)
+            itemCounter = 1; 
         }
-
-        let enWord = item.en || "";
-        let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif; font-size: 10pt;">${item.ipa}</span>` : '';
-        let pos = item.pos ? `<i style="font-size: 10pt;">${item.pos}</i>` : '';
-
-        // Ghép phần đồng nghĩa / trái nghĩa
-        let notes = [];
-        if (item.syn && item.syn !== '-') notes.push(`<b>Đồng nghĩa:</b> ${item.syn}`);
-        if (item.ant && item.ant !== '-') notes.push(`<b>Trái nghĩa:</b> ${item.ant}`);
-        let notesHtml = notes.length > 0 ? `<br><span style="font-size: 10pt; color: #444;">${notes.join(' | ')}</span>` : '';
 
         html += `
             <tr style="page-break-inside: avoid;">
-                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold; font-size: 11pt;">${itemCounter}</td>
+                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${itemCounter}</td>
                 <td style="border: 1px solid #000; padding: 4px 6px;">
-                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${enWord}</strong>
-                    <div style="margin-top: 2px;">${pos} ${ipa}</div>
+                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${item.en}</strong>
+                    <div style="font-size: 9pt; margin-top: 1px;">${item.pos || ''} ${item.ipa || ''}</div>
                 </td>
                 <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
                     <b>${item.vi}</b>
-                    ${notesHtml}
+                    ${(item.syn || item.ant) ? `<br><span style="font-size: 9.5pt; color: #444;">${item.syn ? 'Đồng nghĩa: '+item.syn : ''} ${item.ant ? '| Trái nghĩa: '+item.ant : ''}</span>` : ''}
                 </td>
             </tr>
         `;
-        itemCounter++; // Tăng STT
+        itemCounter++;
     });
 
-    html += `
-            </tbody>
-        </table>
-        <div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt; font-family: Arial, Helvetica, sans-serif;">--- HẾT ---</div>
-    `;
+    html += `</tbody></table><div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt;">--- HẾT ---</div>`;
 
-    // 5. Xuất ra máy in
     const printArea = document.getElementById('print-area');
     printArea.innerHTML = html;
     
+    // GỌI HÀM TẠO QR CODE CHO BẢN IN
     setTimeout(() => {
-        window.print();
-    }, 100);
-}
-
-/* ==========================================================================
-   TÍNH NĂNG CHIA SẺ MÃ QR VÀ LINK CHO GAME TỪ VỰNG
-========================================================================== */
-function shareVocabQR() {
-    const topic = document.getElementById('vocab-topic-select').value;
-    const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
-    
-    const overlay = document.createElement('div');
-    overlay.className = 'qr-modal-overlay';
-    overlay.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = `background: var(--card-bg); padding: 30px; border-radius: 24px; border: 1px solid var(--border-color); text-align: center; max-width: 350px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.5);`;
-    
-    let topicName = topic === 'ALL' ? 'Tất cả từ vựng' : `Chủ đề: ${topic}`;
-    modal.innerHTML = `
-        <h3 style="margin-top:0; color: var(--primary);">Quét QR để Luyện Từ Vựng</h3>
-        <p style="font-size:14px; color: var(--text-muted);">${topicName}</p>
-        <div id="vocab-qrcode-container" style="background: white; padding: 15px; border-radius: 16px; display: inline-block; margin: 15px 0;"></div>
-        <p style="font-size:12px; word-break: break-all; color: var(--text-muted);">${shareUrl}</p>
-        <button class="btn btn-primary" style="margin-top:15px; width:100%;" onclick="this.closest('.qr-modal-overlay').remove()">Đóng</button>
-    `;
-    
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-    
-    const container = modal.querySelector('#vocab-qrcode-container');
-    if (typeof QRCode !== 'undefined') {
-        new QRCode(container, { text: shareUrl, width: 220, height: 220, colorDark: "#0F4D5F", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L });
-    } else {
-        const img = document.createElement('img');
-        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
-        img.style.borderRadius = "8px";
-        container.appendChild(img);
-    }
-    
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-}
-
-function openVocabGameFromParams() {
-    const params = new URLSearchParams(window.location.search);
-    const topic = params.get('vocabTopic');
-
-    if (!db.Vocabulary || db.Vocabulary.length === 0) {
-        alert("Kho từ vựng trống."); goHome(); return;
-    }
-
-    // Cách ly giao diện (Tắt menu, bật toàn màn hình)
-    isIsolatedMode = true;
-    document.getElementById('app-sidebar').style.display = 'none';
-    document.querySelector('.topbar').style.display = 'none';
-    const bottomNav = document.getElementById('bottom-nav');
-    if(bottomNav) bottomNav.style.display = 'none';
-    
-    const dashboard = document.getElementById('app-dashboard');
-    dashboard.style.margin = '0'; dashboard.style.width = '100vw'; dashboard.style.height = '100vh'; dashboard.style.borderRadius = '0'; dashboard.style.border = 'none';
-
-    // Bảng yêu cầu nhập tên
-    const overlay = document.createElement('div');
-    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-main); z-index:99999; display:flex; align-items:center; justify-content:center;";
-    const box = document.createElement('div');
-    box.style.cssText = "background:var(--card-bg); padding:35px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9); animation: fadeInUp 0.4s ease;";
-
-    const savedName = localStorage.getItem('studentName') || "";
-
-    box.innerHTML = `
-        <div style="font-size: 40px; margin-bottom: 10px;">🎮</div>
-        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Game Từ Vựng!</h3>
-        <p style="color:var(--text-muted); margin-bottom:20px; line-height:1.5;">Chủ đề: <strong style="color:var(--text-main);">${topic === 'ALL' ? 'Tất cả' : topic}</strong></p>
-        <div style="text-align: left; margin-bottom: 25px;">
-            <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
-            <input type="text" id="guest-name" value="${savedName}" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
-        </div>
-        <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Bắt Đầu Chiến</button>
-    `;
-
-    overlay.appendChild(box); document.body.appendChild(overlay);
-
-    document.getElementById('btn-start-vocab-guest').onclick = () => {
-        const name = document.getElementById('guest-name').value.trim();
-        if (!name) { alert("⚠️ Vui lòng nhập tên của em nhé!"); document.getElementById('guest-name').focus(); return; }
-        localStorage.setItem('studentName', name);
-        document.body.removeChild(overlay);
-
-        // Mở game và tự động chiến
-        openVocabGame();
-        setTimeout(() => {
-            const select = document.getElementById('vocab-topic-select');
-            if (select) { select.value = topic; initVocabGame(); }
-        }, 100);
-    };
+        const qrBox = document.getElementById('vocab-print-qr-code');
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(qrBox, { text: shareUrl, width: 60, height: 60, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.L });
+        } else {
+            qrBox.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(shareUrl)}" style="width:60px;">`;
+        }
+        
+        // Đợi QR render xong rồi mới in
+        setTimeout(() => { window.print(); }, 200);
+    }, 50);
 }
