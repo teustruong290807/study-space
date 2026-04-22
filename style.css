@@ -601,6 +601,12 @@ body.student-mode button[onclick^="saveNew"] {
         background: transparent !important;
         text-align: justify !important;
     }
+   /* ---- BỔ SUNG CSS IN TỪ VỰNG ---- */
+    .print-vocab-en {
+        color: #00008B !important; /* Màu xanh đậm (Dark Blue) */
+        -webkit-print-color-adjust: exact !important; /* Ép Chrome/Safari in màu */
+        print-color-adjust: exact !important; /* Ép Firefox/Edge in màu */
+    }
 }
 
 /* ==========================================================================
