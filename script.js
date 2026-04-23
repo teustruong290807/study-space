@@ -4240,98 +4240,95 @@ function executePrintVocab() {
         
         let listToPrint = topic === "ALL" ? db.Vocabulary : db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
         
-        // Sắp xếp 3 tầng: Cấp độ -> Loại -> A-Z
+        // Sắp xếp 3 tầng
         listToPrint.sort((a, b) => {
             const levels = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6, 'None': 7 };
             const types = { 'word': 1, 'phrase': 2, 'collo': 3 };
-
             let lvlA = levels[a.level || 'None'] || 7; 
             let lvlB = levels[b.level || 'None'] || 7;
             if (lvlA !== lvlB) return lvlA - lvlB;
-
             let typeA = types[a.type || 'word'] || 1;
             let typeB = types[b.type || 'word'] || 1;
             if (typeA !== typeB) return typeA - typeB;
-
             return (a.en || "").toLowerCase().localeCompare((b.en || "").toLowerCase(), 'en', { sensitivity: 'base' });
         });
 
         const shareUrl = `${window.location.origin}${window.location.pathname}?vocabTopic=${encodeURIComponent(topic)}`;
-        // Sử dụng API online cho ổn định, loại bỏ hoàn toàn lỗi canvas ngầm
-        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+
+        // TẠO QR DATA URL NGAY LẬP TỨC (KHÔNG CHỜ TẢI ẢNH)
+        const tempDiv = document.createElement('div');
+        let qrDataUrl = "";
+        if (typeof QRCode !== 'undefined') {
+            const qr = new QRCode(tempDiv, { text: shareUrl, width: 128, height: 128 });
+            const canvas = tempDiv.querySelector('canvas');
+            qrDataUrl = canvas ? canvas.toDataURL("image/png") : "";
+        }
 
         let html = `
-            <div style="margin-bottom:10px; font-family:Arial, sans-serif; display:flex; justify-content:space-between; align-items:flex-start;">
-                <div style="width:80px;"></div>
+        <style>
+            @media print {
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { margin: 0; padding: 0; }
+            }
+            .print-container { font-family: "Arial", sans-serif !important; color: #000; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: "Arial", sans-serif !important; }
+            th, td { border: 1px solid #000; padding: 6px; font-size: 11pt; }
+            .level-header { background: #334155 !important; color: #fff !important; font-weight: bold; text-align: center; font-size: 12pt; }
+            .type-header { background: #f1f5f9 !important; font-style: italic; font-weight: bold; text-align: center; }
+            .en-word { color: #00008B !important; font-size: 12pt; font-weight: bold; }
+        </style>
+        <div class="print-container">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+                <div style="width:100px;"></div>
                 <div style="flex:1; text-align:center;">
-                    <h2 style="margin:0; font-size:14pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-                    <h3 style="margin:4px 0; font-size:12pt;">${topic === "ALL" ? "TẤT CẢ TỪ VỰNG" : topic.toUpperCase()}</h3>
-                    <p style="font-size:10pt; font-style:italic;">Tổng số: ${listToPrint.length} mục</p>
+                    <h2 style="margin:0; font-size:16pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+                    <h3 style="margin:5px 0; font-size:13pt;">${topic === "ALL" ? "TOÀN BỘ KHO TỪ" : topic.toUpperCase()}</h3>
+                    <p style="font-size:10pt; margin:0;">Tổng số: ${listToPrint.length} từ vựng</p>
                 </div>
-                <div style="width:80px; text-align:center;">
-                    <img src="${qrImgUrl}" style="width:65px; height:65px; border:1px solid #ccc; padding:2px; background:#fff;">
-                    <div style="font-size:7pt; font-weight:bold; white-space:nowrap; margin-top:4px;">QUÉT ĐỂ CHƠI</div>
+                <div style="width:100px; text-align:center;">
+                    <img src="${qrDataUrl}" style="width:70px; height:70px; border:1px solid #000; padding:2px;">
+                    <div style="font-size:8pt; font-weight:bold; margin-top:3px;">QUÉT ĐỂ CHƠI</div>
                 </div>
             </div>
-            <hr style="border:0.5px solid black; margin-bottom:10px;">
-            <table style="width:100%; border-collapse:collapse; font-family:Arial; font-size:11pt;">
+            <hr style="border:1px solid #000;">
+            <table>
                 <thead>
-                    <tr style="background:#f9f9f9;">
-                        <th style="border:1px solid #000; padding:4px;">STT</th>
-                        <th style="border:1px solid #000; padding:4px;">Từ vựng / Cấu trúc</th>
-                        <th style="border:1px solid #000; padding:4px;">Nghĩa & Ghi chú</th>
+                    <tr style="background:#eee;">
+                        <th style="width:40px;">STT</th>
+                        <th>Từ vựng / Cấu trúc</th>
+                        <th>Nghĩa & Ghi chú</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
-        let currentCatLevel = ""; 
-        let currentCatType = ""; 
-        let stt = 1;
-
+        let curLvl = ""; let curTyp = ""; let stt = 1;
         listToPrint.forEach(item => {
-            let itemLevel = item.level || 'None';
-            let itemType = item.type || 'word';
-
-            // Phân tầng 1: Cấp độ
-            if (itemLevel !== currentCatLevel) {
-                let levelTitle = itemLevel === 'None' ? 'CHƯA PHÂN CẤP' : `CẤP ĐỘ: ${itemLevel}`;
-                html += `<tr><td colspan="3" style="background:#cbd5e1; border:1px solid #000; padding:6px; text-align:center; font-weight:900; font-size:12pt; color:#0f172a;">🎯 ${levelTitle}</td></tr>`;
-                currentCatLevel = itemLevel;
-                currentCatType = ""; 
+            if ((item.level || 'None') !== curLvl) {
+                curLvl = item.level || 'None';
+                html += `<tr class="level-header"><td colspan="3">🎯 CẤP ĐỘ: ${curLvl === 'None' ? 'CHƯA PHÂN LOẠI' : curLvl}</td></tr>`;
+                curTyp = "";
             }
-
-            // Phân tầng 2: Loại từ
-            if (itemType !== currentCatType) {
-                let typeName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : (itemType === 'phrase' ? '🔗 CỤM TỪ (PHRASES)' : '🤝 KẾT HỢP TỪ (COLLOCATIONS)');
-                html += `<tr><td colspan="3" style="background:#f1f5f9; border:1px solid #000; padding:4px; text-align:center; font-weight:bold; font-size:10.5pt; font-style:italic;">${typeName}</td></tr>`;
-                currentCatType = itemType; 
-                stt = 1; 
+            if ((item.type || 'word') !== curTyp) {
+                curTyp = item.type || 'word';
+                let tName = curTyp === 'word' ? 'TỪ ĐƠN' : (curTyp === 'phrase' ? 'CỤM TỪ' : 'COLLOCATIONS');
+                html += `<tr class="type-header"><td colspan="3">-- ${tName} --</td></tr>`;
+                stt = 1;
             }
-
-            let enText = item.en || "";
-            let viText = item.vi || "";
-            let synText = (item.syn && item.syn !== '-') ? `<br><small>Đồng nghĩa: ${item.syn}</small>` : '';
-            let antText = (item.ant && item.ant !== '-') ? `<br><small>Trái nghĩa: ${item.ant}</small>` : '';
-
             html += `
                 <tr style="page-break-inside:avoid;">
-                    <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:4px;">${stt++}</td>
-                    <td style="border:1px solid #000; padding:4px;"><strong style="color:#00008B; font-size:12pt;">${enText}</strong><br><small>${item.pos || ''} ${item.ipa || ''}</small></td>
-                    <td style="border:1px solid #000; padding:4px;"><b>${viText}</b>${synText}${antText}</td>
+                    <td style="text-align:center; font-weight:bold;">${stt++}</td>
+                    <td><span class="en-word">${item.en}</span><br><small>${item.pos || ''} ${item.ipa || ''}</small></td>
+                    <td><b>${item.vi}</b>${item.syn ? '<br><small>Đồng nghĩa: '+item.syn+'</small>' : ''}</td>
                 </tr>`;
         });
         
-        html += `</tbody></table><div style="text-align:center; margin-top:20px; font-weight:bold;">--- HẾT ---</div>`;
-        
+        html += `</tbody></table></div>`;
         document.getElementById('print-area').innerHTML = html;
         
-        // Gọi lệnh in trực tiếp, không đợi lâu
-        setTimeout(() => {
-            window.print();
-        }, 300);
+        // Đợi 200ms để trình duyệt render CSS rồi in ngay
+        setTimeout(() => { window.print(); }, 200);
 
     } catch(err) {
-        alert("⚠️ Đã xảy ra lỗi khi tạo bản in: " + err.message);
-        console.error(err);
+        alert("Lỗi in: " + err.message);
     }
 }
