@@ -1722,16 +1722,62 @@ function openVocabManage() {
 }
 
 function saveNewVocab() {
-    const type = document.getElementById('vocab-type-input').value; const topic = document.getElementById('vocab-topic-input').value.trim() || 'Chung'; const en = document.getElementById('vocab-en-input').value.trim(); let ipa = document.getElementById('vocab-ipa-input').value.trim(); let pos = document.getElementById('vocab-pos-input').value.trim(); const vi = document.getElementById('vocab-vi-input').value.trim(); let syn = document.getElementById('vocab-syn-input').value.trim(); let ant = document.getElementById('vocab-ant-input').value.trim();
-    if (!en || !vi) { alert("Vui lòng nhập ít nhất Từ tiếng Anh và Nghĩa tiếng Việt!"); return; }
-    if (syn === '-' || syn === '') syn = null; if (ant === '-' || ant === '') ant = null; if (ipa === '-') ipa = ''; if (pos === '-') pos = '';
-    db.Vocabulary.unshift({ type: type, topic: topic, en: en, ipa: ipa, pos: pos ? `(${pos})` : '', vi: vi, syn: syn, ant: ant });
+    // 1. Lấy dữ liệu từ các ô nhập liệu (Đã bổ sung lấy Cấp độ)
+    const levelElement = document.getElementById('vocab-level-input');
+    const level = levelElement ? levelElement.value : 'None'; // Mặc định là None nếu không tìm thấy ô cấp độ
+    
+    const type = document.getElementById('vocab-type-input').value; 
+    const topic = document.getElementById('vocab-topic-input').value.trim() || 'Chung'; 
+    const en = document.getElementById('vocab-en-input').value.trim(); 
+    let ipa = document.getElementById('vocab-ipa-input').value.trim(); 
+    let pos = document.getElementById('vocab-pos-input').value.trim(); 
+    const vi = document.getElementById('vocab-vi-input').value.trim(); 
+    let syn = document.getElementById('vocab-syn-input').value.trim(); 
+    
+    // Kiểm tra an toàn cho ô Trái nghĩa (phòng trường hợp bạn đã gộp chung vào ô Đồng nghĩa)
+    const antElement = document.getElementById('vocab-ant-input');
+    let ant = antElement ? antElement.value.trim() : null;
+
+    // 2. Kiểm tra điều kiện bắt buộc
+    if (!en || !vi) { 
+        alert("Vui lòng nhập ít nhất Từ tiếng Anh và Nghĩa tiếng Việt!"); 
+        return; 
+    }
+
+    // 3. Chuẩn hóa dữ liệu rỗng
+    if (syn === '-' || syn === '') syn = null; 
+    if (ant === '-' || ant === '') ant = null; 
+    if (ipa === '-') ipa = ''; 
+    if (pos === '-') pos = '';
+
+    // 4. Đẩy từ vựng mới vào mảng dữ liệu (Có thêm ID và Level)
+    db.Vocabulary.unshift({ 
+        id: Date.now().toString(), // Tạo ID độc nhất dựa trên thời gian
+        level: level,              // Bổ sung phân cấp A1-C2
+        type: type, 
+        topic: topic, 
+        en: en, 
+        ipa: ipa, 
+        pos: pos ? `(${pos})` : '', 
+        vi: vi, 
+        syn: syn, 
+        ant: ant 
+    });
+
+    // 5. Lưu xuống máy tính
     localStorage.setItem('myStudyData', JSON.stringify(db));
     
-    document.getElementById('vocab-en-input').value = ""; document.getElementById('vocab-vi-input').value = "";
-    document.getElementById('vocab-ipa-input').value = ""; document.getElementById('vocab-pos-input').value = "";
-    document.getElementById('vocab-syn-input').value = ""; document.getElementById('vocab-ant-input').value = "";
-    document.getElementById('vocab-en-input').focus(); renderVocabList();
+    // 6. Xóa trắng các ô (ngoại trừ Chủ đề, Phân loại, Cấp độ để nhập tiếp cho lẹ)
+    document.getElementById('vocab-en-input').value = ""; 
+    document.getElementById('vocab-vi-input').value = "";
+    document.getElementById('vocab-ipa-input').value = ""; 
+    document.getElementById('vocab-pos-input').value = "";
+    document.getElementById('vocab-syn-input').value = ""; 
+    if (antElement) antElement.value = "";
+    
+    // 7. Chuyển con trỏ chuột về ô Tiếng Anh và cập nhật danh sách
+    document.getElementById('vocab-en-input').focus(); 
+    renderVocabList();
 }
 
 let draggedVocabIndex = -1;
@@ -1776,20 +1822,75 @@ function deleteSelectedVocabs() {
 function deleteAllVocabs() { if(confirm("⚠️ NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ kho từ vựng không? Hành động này không thể hoàn tác!")) { db.Vocabulary = []; localStorage.setItem('myStudyData', JSON.stringify(db)); renderVocabList(); } }
 
 function saveBulkVocab() {
-    const rawText = document.getElementById('vocab-bulk-input').value.trim(); if (!rawText) { alert("Vui lòng dán dữ liệu vào ô trống!"); return; }
-    const topic = document.getElementById('vocab-topic-input').value.trim() || 'Chung'; const lines = rawText.split('\n'); let successCount = 0;
-    lines.forEach(line => {
-        const parts = line.split('\t'); 
-        if (parts.length >= 2) { 
-            let en = parts[0] ? parts[0].trim() : ''; 
-            if (en === '' || en.toLowerCase().includes('từ vựng') || en.toLowerCase().includes('tiếng anh')) return;
-            let ipa = parts[1] ? parts[1].trim() : ''; let pos = parts[2] ? parts[2].trim() : ''; let vi = parts[3] ? parts[3].trim() : ''; let syn = parts[4] ? parts[4].trim() : null; let ant = parts[5] ? parts[5].trim() : null;
-            if (parts.length === 2) { vi = parts[1].trim(); ipa = ''; pos = ''; }
-            if (syn === '-' || syn === '') syn = null; if (ant === '-' || ant === '') ant = null; if (ipa === '-') ipa = ''; if (pos === '-') pos = '';
-            db.Vocabulary.unshift({ type: 'word', topic: topic, en: en, ipa: ipa, pos: pos && !pos.startsWith('(') ? `(${pos})` : pos, vi: vi, syn: syn, ant: ant }); successCount++;
+    const bulkData = document.getElementById('vocab-bulk-input').value.trim();
+    if (!bulkData) { alert("⚠️ Vui lòng dán dữ liệu vào ô trước khi xử lý!"); return; }
+
+    const lines = bulkData.split('\n');
+    let successCount = 0;
+
+    lines.forEach((line, index) => {
+        // Dữ liệu copy từ Excel/Google Sheet sẽ cách nhau bằng ký tự Tab (\t)
+        const cols = line.split('\t').map(c => c.trim()); 
+        
+        if (cols.length >= 2) { // Điều kiện tối thiểu: Phải có Anh - Việt
+            let level = 'None', type = 'word', topic = 'Chung', en = '', vi = '', ipa = '', pos = '', syn = null, ant = null;
+
+            // Kịch bản 1: Chỉ dán 2 cột (Tiếng Anh | Tiếng Việt)
+            if (cols.length === 2) {
+                en = cols[0]; vi = cols[1];
+            } 
+            // Kịch bản 2: Dán 3 cột (Chủ đề | Tiếng Anh | Tiếng Việt)
+            else if (cols.length === 3) {
+                topic = cols[0]; en = cols[1]; vi = cols[2];
+            } 
+            // Kịch bản 3: Full Option (8 cột) -> Cấp độ | Loại | Chủ đề | Tiếng Anh | Tiếng Việt | Phiên âm | Từ loại | Đồng nghĩa
+            else if (cols.length >= 5) { 
+                level = cols[0] || 'None';
+                type = cols[1] || 'word'; // Các loại: word, phrase, collo
+                topic = cols[2] || 'Chung';
+                en = cols[3];
+                vi = cols[4];
+                ipa = cols[5] || '';
+                pos = cols[6] || '';
+                
+                // Tách đồng nghĩa và trái nghĩa nếu có dấu gạch đứng "|"
+                let synText = cols[7] || '';
+                if (synText.includes('|')) {
+                    let parts = synText.split('|');
+                    syn = parts[0].trim();
+                    ant = parts[1].trim();
+                } else {
+                    syn = synText || null;
+                }
+            }
+
+            // Chỉ lưu khi Tiếng Anh và Tiếng Việt không bị rỗng
+            if (en !== '' && vi !== '') {
+                db.Vocabulary.unshift({
+                    id: Date.now().toString() + index, // Chống trùng lặp ID khi vòng lặp chạy quá nhanh
+                    level: level,
+                    type: type,
+                    topic: topic,
+                    en: en,
+                    vi: vi,
+                    ipa: ipa,
+                    pos: pos ? (pos.includes('(') ? pos : `(${pos})`) : '', // Tự bọc dấu ngoặc cho Từ loại
+                    syn: syn === '-' || syn === '' ? null : syn,
+                    ant: ant === '-' || ant === '' ? null : ant
+                });
+                successCount++;
+            }
         }
     });
-    if (successCount > 0) { localStorage.setItem('myStudyData', JSON.stringify(db)); document.getElementById('vocab-bulk-input').value = ""; renderVocabList(); alert(`✅ Tuyệt vời! Đã gắn tag [${topic}] và nạp ${successCount} từ vựng!`); } else { alert("❌ Dữ liệu không hợp lệ. Hãy chắc chắn bạn dán đúng cấu trúc."); }
+
+    if (successCount > 0) {
+        localStorage.setItem('myStudyData', JSON.stringify(db));
+        document.getElementById('vocab-bulk-input').value = ""; // Xóa trắng ô nhập liệu
+        renderVocabList(); // Làm mới danh sách hiển thị
+        alert(`✅ Đã nhập thành công ${successCount} từ vựng!`);
+    } else {
+        alert("⚠️ Không tìm thấy dữ liệu hợp lệ. Vui lòng copy từ Excel (Các cột phải ngăn cách bằng phím Tab).");
+    }
 }
 
 let playingVocabPool = []; let vScore = 0, vStreak = 0, vMaxStreak = 0, vLives = 3; let vCurrentQuestion = null; let currentVocabTopic = "";
@@ -4134,130 +4235,95 @@ function openPrintVocabModal() {
 function executePrintVocab() {
     const topic = document.getElementById('print-vocab-topic').value;
     document.getElementById('vocab-print-modal').remove(); 
-
-    let listToPrint = [];
-    let printTitle = "";
-
-    // 1. Lọc và đặt tiêu đề
-    if (topic === "ALL") {
-        listToPrint = db.Vocabulary;
-        printTitle = "TẤT CẢ TỪ VỰNG";
-    } else {
-        listToPrint = db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
-        printTitle = `${topic.toUpperCase()}`;
-    }
-
-    // 2. Sắp xếp A-Z
+    let listToPrint = topic === "ALL" ? db.Vocabulary : db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
+    
+    // THUẬT TOÁN SẮP XẾP 3 TẦNG: Cấp độ -> Loại -> A-Z
     listToPrint.sort((a, b) => {
-        let typeA = a.type === 'structure' ? 'structure' : 'word';
-        let typeB = b.type === 'structure' ? 'structure' : 'word';
-        if (typeA !== typeB) return typeA === 'word' ? -1 : 1;
+        const levels = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6, 'None': 7 };
+        const types = { 'word': 1, 'phrase': 2, 'collo': 3 };
 
-        let enA = (a.en || "").trim().toLowerCase();
-        let enB = (b.en || "").trim().toLowerCase();
-        return enA.localeCompare(enB, 'en', { sensitivity: 'base' }); 
+        // Tầng 1: So sánh Cấp độ
+        let lvlA = levels[a.level] || 7; 
+        let lvlB = levels[b.level] || 7;
+        if (lvlA !== lvlB) return lvlA - lvlB;
+
+        // Tầng 2: So sánh Loại từ
+        let typeA = types[a.type] || 1;
+        let typeB = types[b.type] || 1;
+        if (typeA !== typeB) return typeA - typeB;
+
+        // Tầng 3: So sánh A-Z
+        return (a.en || "").toLowerCase().localeCompare((b.en || "").toLowerCase(), 'en', { sensitivity: 'base' });
     });
 
-    // Tạo link cho ảnh QR
-    const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = `${baseUrl}?vocabTopic=${encodeURIComponent(topic)}`;
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?vocabTopic=${encodeURIComponent(topic)}`;
+    
+    const tempDiv = document.createElement('div');
+    new QRCode(tempDiv, { text: shareUrl, width: 120, height: 120 });
+    
+    setTimeout(() => {
+        const canvas = tempDiv.querySelector('canvas');
+        const qrDataUrl = canvas ? canvas.toDataURL("image/png") : "";
 
-    // 3. XÂY DỰNG GIAO DIỆN BẢN IN
-    let html = `
-        <div class="print-header" style="margin-bottom: 10px; font-family: Arial, sans-serif;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                
-                <div style="width: 80px;"></div>
-
-                <div style="flex: 1; text-align: center;">
-                    <h2 style="margin: 0; font-size: 14pt; text-transform: uppercase;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-                    <h3 style="margin: 4px 0; font-size: 12pt;">${printTitle}</h3>
-                    <p style="font-size: 10pt; margin: 0; font-style: italic;">Tổng số: ${listToPrint.length} mục</p>
+        let html = `
+            <div style="margin-bottom:10px; font-family:Arial, sans-serif; display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="width:80px;"></div>
+                <div style="flex:1; text-align:center;">
+                    <h2 style="margin:0; font-size:14pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+                    <h3 style="margin:4px 0; font-size:12pt;">${topic.toUpperCase()}</h3>
+                    <p style="font-size:10pt; font-style:italic;">Tổng số: ${listToPrint.length} mục</p>
                 </div>
-                
-                <div style="width: 80px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
-                    <img id="print-qr-img" src="${qrImgUrl}" style="width: 65px; height: 65px; display: block; border: 1px solid #ccc; padding: 2px; background: #fff;" crossorigin="anonymous">
-                    <div style="font-family: Arial, Helvetica, sans-serif !important; font-size: 7.5pt; font-weight: bold; margin-top: 4px; color: #000; letter-spacing: 0; line-height: 1.2;">QUÉT ĐỂ CHƠI</div>
+                <div style="width:80px; text-align:center;">
+                    <img src="${qrDataUrl}" style="width:65px; height:65px; border:1px solid #ccc; padding:2px;">
+                    <div style="font-size:7pt; font-weight:bold; white-space:nowrap;">QUÉT ĐỂ CHƠI</div>
                 </div>
-
             </div>
-            <hr style="border: 0.5px solid black; margin-top: 8px; margin-bottom: 8px;">
-        </div>
+            <hr style="border:0.5px solid black; margin-bottom:10px;">
+            <table style="width:100%; border-collapse:collapse; font-family:Arial; font-size:11pt;">
+                <thead>
+                    <tr style="background:#f9f9f9;">
+                        <th style="border:1px solid #000; padding:4px;">STT</th>
+                        <th style="border:1px solid #000; padding:4px;">Từ vựng / Cấu trúc</th>
+                        <th style="border:1px solid #000; padding:4px;">Nghĩa & Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
-        <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
-            <thead>
-                <tr style="background-color: #f9f9f9;">
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 5%; text-align: center;">STT</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 35%; text-align: left;">Từ vựng / Cấu trúc</th>
-                    <th style="border: 1px solid #000; padding: 4px 6px; width: 60%; text-align: left;">Nghĩa & Ghi chú</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+        let currentCatLevel = ""; 
+        let currentCatType = ""; 
+        let stt = 1;
 
-    let currentCategory = "";
-    let itemCounter = 1;
-    
-    listToPrint.forEach((item) => {
-        let itemType = item.type === 'structure' ? 'structure' : 'word';
-        if (itemType !== currentCategory) {
-            let catName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : '🔗 CẤU TRÚC & CỤM TỪ';
-            html += `<tr style="background-color: #f1f5f9;"><td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; font-size: 10.5pt;">${catName}</td></tr>`;
-            currentCategory = itemType;
-            itemCounter = 1; 
-        }
+        listToPrint.forEach(item => {
+            let itemLevel = item.level || 'None';
+            let itemType = item.type || 'word';
 
-        let enWord = item.en || "";
-        let ipa = item.ipa ? `<span style="font-family: Arial, sans-serif; font-size: 9pt;">${item.ipa}</span>` : '';
-        let pos = item.pos ? `<i style="font-size: 9pt;">${item.pos}</i>` : '';
+            // In dải phân cách CẤP ĐỘ
+            if (itemLevel !== currentCatLevel) {
+                let levelTitle = itemLevel === 'None' ? 'CHƯA PHÂN CẤP' : `CẤP ĐỘ: ${itemLevel}`;
+                html += `<tr><td colspan="3" style="background:#cbd5e1; border:1px solid #000; padding:6px; text-align:center; font-weight:900; font-size:12pt; color:#0f172a;">🎯 ${levelTitle}</td></tr>`;
+                currentCatLevel = itemLevel;
+                currentCatType = ""; // Đặt lại loại từ để in header mới
+            }
 
-        let notesHtml = '';
-        if (item.syn && item.syn !== '-' && item.ant && item.ant !== '-') {
-            notesHtml = `<br><span style="font-size: 9.5pt; color: #444;">Đồng nghĩa: ${item.syn} | Trái nghĩa: ${item.ant}</span>`;
-        } else if (item.syn && item.syn !== '-') {
-            notesHtml = `<br><span style="font-size: 9.5pt; color: #444;">Đồng nghĩa: ${item.syn}</span>`;
-        } else if (item.ant && item.ant !== '-') {
-            notesHtml = `<br><span style="font-size: 9.5pt; color: #444;">Trái nghĩa: ${item.ant}</span>`;
-        }
+            // In dải phân cách LOẠI TỪ
+            if (itemType !== currentCatType) {
+                let typeName = itemType === 'word' ? '📚 TỪ ĐƠN (WORDS)' : (itemType === 'phrase' ? '🔗 CỤM TỪ (PHRASES)' : '🤝 KẾT HỢP TỪ (COLLOCATIONS)');
+                html += `<tr><td colspan="3" style="background:#f1f5f9; border:1px solid #000; padding:4px; text-align:center; font-weight:bold; font-size:10.5pt; font-style:italic;">${typeName}</td></tr>`;
+                currentCatType = itemType; 
+                stt = 1; // Reset STT về 1 khi sang loại từ mới
+            }
 
-        html += `
-            <tr style="page-break-inside: avoid;">
-                <td style="border: 1px solid #000; padding: 4px 6px; text-align: center; font-weight: bold;">${itemCounter}</td>
-                <td style="border: 1px solid #000; padding: 4px 6px;">
-                    <strong class="print-vocab-en" style="color: #00008B !important; font-size: 12pt;">${enWord}</strong>
-                    <div style="margin-top: 1px;">${pos} ${ipa}</div>
-                </td>
-                <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11pt;">
-                    <b>${item.vi}</b>
-                    ${notesHtml}
-                </td>
-            </tr>
-        `;
-        itemCounter++;
-    });
-
-    html += `</tbody></table><div style="text-align: center; margin-top: 15px; font-weight: bold; font-size: 11pt;">--- HẾT ---</div>`;
-
-    const printArea = document.getElementById('print-area');
-    printArea.innerHTML = html;
-    
-    // 4. LÔ-GÍC CHỜ ẢNH TẢI XONG MỚI BẬT LỆNH IN
-    const qrImgElement = document.getElementById('print-qr-img');
-    let printTriggered = false;
-
-    const triggerPrint = () => {
-        if (!printTriggered) {
-            printTriggered = true;
-            window.print();
-        }
-    };
-
-    if (qrImgElement.complete) {
-        triggerPrint();
-    } else {
-        qrImgElement.onload = triggerPrint;
-        qrImgElement.onerror = triggerPrint; 
-        setTimeout(triggerPrint, 1500); 
-    }
+            html += `
+                <tr style="page-break-inside:avoid;">
+                    <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:4px;">${stt++}</td>
+                    <td style="border:1px solid #000; padding:4px;"><strong style="color:#00008B; font-size:12pt;">${item.en}</strong><br><small>${item.pos || ''} ${item.ipa || ''}</small></td>
+                    <td style="border:1px solid #000; padding:4px;"><b>${item.vi}</b>${item.syn && item.syn !== '-' ? '<br><small>Đồng nghĩa: '+item.syn+'</small>' : ''}</td>
+                </tr>`;
+        });
+        
+        html += `</tbody></table><div style="text-align:center; margin-top:20px;">--- HẾT ---</div>`;
+        
+        document.getElementById('print-area').innerHTML = html;
+        window.print();
+    }, 100);
 }
