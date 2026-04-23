@@ -4255,7 +4255,7 @@ function executePrintVocab() {
 
         const shareUrl = `${window.location.origin}${window.location.pathname}?vocabTopic=${encodeURIComponent(topic)}`;
 
-        // Hàm TẠO GIAO DIỆN VÀ IN (Sẽ được gọi sau khi mã QR đã sẵn sàng)
+        // Hàm TẠO GIAO DIỆN VÀ IN 
         const doPrint = (qrDataUrl) => {
             let html = `
             <style>
@@ -4318,11 +4318,10 @@ function executePrintVocab() {
             html += `</tbody></table></div>`;
             document.getElementById('print-area').innerHTML = html;
             
-            // ÉP TRÌNH DUYỆT CHỜ TẤM ẢNH QUÉT QR XONG MỚI IN
-            const qrImageElem = document.getElementById('final-qr-img');
-            qrImageElem.onload = () => {
-                setTimeout(() => { window.print(); }, 150);
-            };
+            // XÓA LỆNH ONLOAD GÂY LỖI. DÙNG SETTIMEOUT 500MS ĐỂ ĐẢM BẢO TRÌNH DUYỆT VẼ XONG 100%
+            setTimeout(() => { 
+                window.print(); 
+            }, 500); 
         };
 
         // GỌI THƯ VIỆN BẰNG ĐÚNG CÚ PHÁP CỦA NÓ 
@@ -4332,7 +4331,7 @@ function executePrintVocab() {
                 doPrint(url);
             });
         } else {
-            // Backup phòng hờ nếu mất mạng: Dùng server dự phòng cực kỳ ổn định
+            // Backup phòng hờ nếu mất mạng
             doPrint(`https://quickchart.io/qr?text=${encodeURIComponent(shareUrl)}&size=150`);
         }
 
