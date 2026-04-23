@@ -4255,86 +4255,86 @@ function executePrintVocab() {
 
         const shareUrl = `${window.location.origin}${window.location.pathname}?vocabTopic=${encodeURIComponent(topic)}`;
 
-        // DỰNG SẴN GIAO DIỆN HTML (Kèm 1 cái hộp trống id="print-qr-box" để hứng mã QR)
-        let html = `
-        <style>
-            @media print {
-                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { margin: 0; padding: 0; }
-            }
-            .print-container { font-family: "Arial", sans-serif !important; color: #000; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: "Arial", sans-serif !important; }
-            th, td { border: 1px solid #000; padding: 6px; font-size: 11pt; }
-            .level-header { background: #334155 !important; color: #fff !important; font-weight: bold; text-align: center; font-size: 12pt; }
-            .type-header { background: #f1f5f9 !important; font-style: italic; font-weight: bold; text-align: center; }
-            .en-word { color: #00008B !important; font-size: 12pt; font-weight: bold; }
-            /* Ép kích thước QR luôn cố định */
-            #print-qr-box img, #print-qr-box canvas { width: 70px !important; height: 70px !important; display: block; margin: 0 auto; }
-        </style>
-        <div class="print-container">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
-                <div style="width:100px;"></div>
-                <div style="flex:1; text-align:center;">
-                    <h2 style="margin:0; font-size:16pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-                    <h3 style="margin:5px 0; font-size:13pt;">${topic === "ALL" ? "TOÀN BỘ KHO TỪ" : topic.toUpperCase()}</h3>
-                    <p style="font-size:10pt; margin:0;">Tổng số: ${listToPrint.length} từ vựng</p>
+        // Hàm TẠO GIAO DIỆN VÀ IN (Sẽ được gọi sau khi mã QR đã sẵn sàng)
+        const doPrint = (qrDataUrl) => {
+            let html = `
+            <style>
+                @media print {
+                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    body { margin: 0; padding: 0; }
+                }
+                .print-container { font-family: "Arial", sans-serif !important; color: #000; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: "Arial", sans-serif !important; }
+                th, td { border: 1px solid #000; padding: 6px; font-size: 11pt; }
+                .level-header { background: #334155 !important; color: #fff !important; font-weight: bold; text-align: center; font-size: 12pt; }
+                .type-header { background: #f1f5f9 !important; font-style: italic; font-weight: bold; text-align: center; }
+                .en-word { color: #00008B !important; font-size: 12pt; font-weight: bold; }
+            </style>
+            <div class="print-container">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+                    <div style="width:100px;"></div>
+                    <div style="flex:1; text-align:center;">
+                        <h2 style="margin:0; font-size:16pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+                        <h3 style="margin:5px 0; font-size:13pt;">${topic === "ALL" ? "TOÀN BỘ KHO TỪ" : topic.toUpperCase()}</h3>
+                        <p style="font-size:10pt; margin:0;">Tổng số: ${listToPrint.length} từ vựng</p>
+                    </div>
+                    <div style="width:100px; text-align:center;">
+                        <img id="final-qr-img" src="${qrDataUrl}" style="width:70px; height:70px; border:1px solid #000; padding:2px; background:#fff;">
+                        <div style="font-size:8pt; font-weight:bold; margin-top:3px;">QUÉT ĐỂ CHƠI</div>
+                    </div>
                 </div>
-                <div style="width:100px; text-align:center;">
-                    <div id="print-qr-box" style="width:70px; height:70px; border:1px solid #000; padding:2px; background:#fff; display: inline-block;"></div>
-                    <div style="font-size:8pt; font-weight:bold; margin-top:3px;">QUÉT ĐỂ CHƠI</div>
-                </div>
-            </div>
-            <hr style="border:1px solid #000;">
-            <table>
-                <thead>
-                    <tr style="background:#eee;">
-                        <th style="width:40px;">STT</th>
-                        <th>Từ vựng / Cấu trúc</th>
-                        <th>Nghĩa & Ghi chú</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+                <hr style="border:1px solid #000;">
+                <table>
+                    <thead>
+                        <tr style="background:#eee;">
+                            <th style="width:40px;">STT</th>
+                            <th>Từ vựng / Cấu trúc</th>
+                            <th>Nghĩa & Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
-        let curLvl = ""; let curTyp = ""; let stt = 1;
-        listToPrint.forEach(item => {
-            if ((item.level || 'None') !== curLvl) {
-                curLvl = item.level || 'None';
-                html += `<tr class="level-header"><td colspan="3">🎯 CẤP ĐỘ: ${curLvl === 'None' ? 'CHƯA PHÂN LOẠI' : curLvl}</td></tr>`;
-                curTyp = "";
-            }
-            if ((item.type || 'word') !== curTyp) {
-                curTyp = item.type || 'word';
-                let tName = curTyp === 'word' ? 'TỪ ĐƠN' : (curTyp === 'phrase' ? 'CỤM TỪ' : 'COLLOCATIONS');
-                html += `<tr class="type-header"><td colspan="3">-- ${tName} --</td></tr>`;
-                stt = 1;
-            }
-            html += `
-                <tr style="page-break-inside:avoid;">
-                    <td style="text-align:center; font-weight:bold;">${stt++}</td>
-                    <td><span class="en-word">${item.en}</span><br><small>${item.pos || ''} ${item.ipa || ''}</small></td>
-                    <td><b>${item.vi}</b>${item.syn ? '<br><small>Đồng nghĩa: '+item.syn+'</small>' : ''}</td>
-                </tr>`;
-        });
-        
-        html += `</tbody></table></div>`;
-        
-        // 1. Dán HTML vào màn hình
-        document.getElementById('print-area').innerHTML = html;
-        
-        // 2. Vẽ QR trực tiếp vào cái hộp rỗng vừa dán ra màn hình
-        if (typeof QRCode !== 'undefined') {
-            new QRCode(document.getElementById("print-qr-box"), {
-                text: shareUrl,
-                width: 128, 
-                height: 128,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L
+            let curLvl = ""; let curTyp = ""; let stt = 1;
+            listToPrint.forEach(item => {
+                if ((item.level || 'None') !== curLvl) {
+                    curLvl = item.level || 'None';
+                    html += `<tr class="level-header"><td colspan="3">🎯 CẤP ĐỘ: ${curLvl === 'None' ? 'CHƯA PHÂN LOẠI' : curLvl}</td></tr>`;
+                    curTyp = "";
+                }
+                if ((item.type || 'word') !== curTyp) {
+                    curTyp = item.type || 'word';
+                    let tName = curTyp === 'word' ? 'TỪ ĐƠN' : (curTyp === 'phrase' ? 'CỤM TỪ' : 'COLLOCATIONS');
+                    html += `<tr class="type-header"><td colspan="3">-- ${tName} --</td></tr>`;
+                    stt = 1;
+                }
+                html += `
+                    <tr style="page-break-inside:avoid;">
+                        <td style="text-align:center; font-weight:bold;">${stt++}</td>
+                        <td><span class="en-word">${item.en}</span><br><small>${item.pos || ''} ${item.ipa || ''}</small></td>
+                        <td><b>${item.vi}</b>${item.syn ? '<br><small>Đồng nghĩa: '+item.syn+'</small>' : ''}</td>
+                    </tr>`;
             });
+            
+            html += `</tbody></table></div>`;
+            document.getElementById('print-area').innerHTML = html;
+            
+            // ÉP TRÌNH DUYỆT CHỜ TẤM ẢNH QUÉT QR XONG MỚI IN
+            const qrImageElem = document.getElementById('final-qr-img');
+            qrImageElem.onload = () => {
+                setTimeout(() => { window.print(); }, 150);
+            };
+        };
+
+        // GỌI THƯ VIỆN BẰNG ĐÚNG CÚ PHÁP CỦA NÓ 
+        if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+            QRCode.toDataURL(shareUrl, { width: 150, margin: 1, color: { dark: '#000000', light: '#ffffff' } }, function (err, url) {
+                if (err) { alert("Lỗi tạo QR"); return; }
+                doPrint(url);
+            });
+        } else {
+            // Backup phòng hờ nếu mất mạng: Dùng server dự phòng cực kỳ ổn định
+            doPrint(`https://quickchart.io/qr?text=${encodeURIComponent(shareUrl)}&size=150`);
         }
-        
-        // 3. Đợi 300ms rồi mới bật máy in
-        setTimeout(() => { window.print(); }, 300);
 
     } catch(err) {
         alert("Lỗi in: " + err.message);
