@@ -4240,7 +4240,6 @@ function executePrintVocab() {
         
         let listToPrint = topic === "ALL" ? db.Vocabulary : db.Vocabulary.filter(v => (v.topic || 'Chung') === topic);
         
-        // Sắp xếp 3 tầng
         listToPrint.sort((a, b) => {
             const levels = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6, 'None': 7 };
             const types = { 'word': 1, 'phrase': 2, 'collo': 3 };
@@ -4255,39 +4254,43 @@ function executePrintVocab() {
 
         const shareUrl = `${window.location.origin}${window.location.pathname}?vocabTopic=${encodeURIComponent(topic)}`;
 
-        // Hàm TẠO GIAO DIỆN VÀ IN 
+        // HÀM TẠO CỬA SỔ TÀNG HÌNH VÀ IN (CÁCH LY HOÀN TOÀN KHỎI WEB)
         const doPrint = (qrDataUrl) => {
             let html = `
-            <style>
-                @media print {
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    body { margin: 0; padding: 0; }
-                }
-                .print-container { font-family: "Arial", sans-serif !important; color: #000; padding: 20px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-family: "Arial", sans-serif !important; }
-                th, td { border: 1px solid #000; padding: 6px; font-size: 11pt; }
-                .level-header { background: #334155 !important; color: #fff !important; font-weight: bold; text-align: center; font-size: 12pt; }
-                .type-header { background: #f1f5f9 !important; font-style: italic; font-weight: bold; text-align: center; }
-                .en-word { color: #00008B !important; font-size: 12pt; font-weight: bold; }
-            </style>
-            <div class="print-container">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>In Từ Vựng</title>
+                <style>
+                    body { font-family: "Arial", sans-serif; color: #000; padding: 20px; background: #fff; margin: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                    th, td { border: 1px solid #000; padding: 6px 8px; font-size: 12pt; }
+                    .level-header { background-color: #334155 !important; color: #fff !important; font-weight: bold; text-align: center; font-size: 13pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .type-header { background-color: #f1f5f9 !important; font-style: italic; font-weight: bold; text-align: center; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .en-word { color: #00008B !important; font-size: 13pt; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    @media print {
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 15px;">
                     <div style="width:100px;"></div>
                     <div style="flex:1; text-align:center;">
-                        <h2 style="margin:0; font-size:16pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
-                        <h3 style="margin:5px 0; font-size:13pt;">${topic === "ALL" ? "TOÀN BỘ KHO TỪ" : topic.toUpperCase()}</h3>
-                        <p style="font-size:10pt; margin:0;">Tổng số: ${listToPrint.length} từ vựng</p>
+                        <h2 style="margin:0; font-size:18pt;">TÀI LIỆU ÔN TẬP TỪ VỰNG</h2>
+                        <h3 style="margin:5px 0; font-size:14pt;">${topic === "ALL" ? "TOÀN BỘ KHO TỪ" : topic.toUpperCase()}</h3>
+                        <p style="font-size:11pt; margin:0; font-style:italic;">Tổng số: ${listToPrint.length} từ vựng</p>
                     </div>
                     <div style="width:100px; text-align:center;">
-                        <img id="final-qr-img" src="${qrDataUrl}" style="width:70px; height:70px; border:1px solid #000; padding:2px; background:#fff;">
-                        <div style="font-size:8pt; font-weight:bold; margin-top:3px;">QUÉT ĐỂ CHƠI</div>
+                        <img src="${qrDataUrl}" style="width:80px; height:80px; border:1px solid #000; padding:2px;">
+                        <div style="font-size:9pt; font-weight:bold; margin-top:4px;">QUÉT ĐỂ CHƠI</div>
                     </div>
                 </div>
-                <hr style="border:1px solid #000;">
+                <hr style="border:1px solid #000; margin-bottom: 15px;">
                 <table>
                     <thead>
-                        <tr style="background:#eee;">
-                            <th style="width:40px;">STT</th>
+                        <tr style="background-color:#e2e8f0; -webkit-print-color-adjust:exact;">
+                            <th style="width:50px;">STT</th>
                             <th>Từ vựng / Cấu trúc</th>
                             <th>Nghĩa & Ghi chú</th>
                         </tr>
@@ -4310,29 +4313,48 @@ function executePrintVocab() {
                 html += `
                     <tr style="page-break-inside:avoid;">
                         <td style="text-align:center; font-weight:bold;">${stt++}</td>
-                        <td><span class="en-word">${item.en}</span><br><small>${item.pos || ''} ${item.ipa || ''}</small></td>
-                        <td><b>${item.vi}</b>${item.syn ? '<br><small>Đồng nghĩa: '+item.syn+'</small>' : ''}</td>
+                        <td><span class="en-word">${item.en}</span><br><small style="color:#444;">${item.pos || ''} ${item.ipa || ''}</small></td>
+                        <td><b>${item.vi}</b>${item.syn ? '<br><small style="color:#555;">Đồng nghĩa: '+item.syn+'</small>' : ''}</td>
                     </tr>`;
             });
             
-            html += `</tbody></table></div>`;
-            document.getElementById('print-area').innerHTML = html;
-            
-            // XÓA LỆNH ONLOAD GÂY LỖI. DÙNG SETTIMEOUT 500MS ĐỂ ĐẢM BẢO TRÌNH DUYỆT VẼ XONG 100%
+            html += `</tbody></table>
+                    <div style="text-align:center; margin-top:30px; font-weight:bold; font-size:12pt;">--- HẾT ---</div>
+                </body>
+            </html>`;
+
+            // TẠO CỬA SỔ TÀNG HÌNH (iFrame) VÀ BƠM HTML VÀO ĐÓ
+            let printFrame = document.createElement('iframe');
+            printFrame.style.position = 'fixed';
+            printFrame.style.right = '0';
+            printFrame.style.bottom = '0';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = '0';
+            document.body.appendChild(printFrame);
+
+            let doc = printFrame.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+
+            // Lấy nét và ra lệnh in nội bộ cửa sổ đó
+            printFrame.contentWindow.focus();
             setTimeout(() => { 
-                window.print(); 
-            }, 500); 
+                printFrame.contentWindow.print(); 
+                // In xong thì tự động dọn rác
+                setTimeout(() => { document.body.removeChild(printFrame); }, 1000);
+            }, 250); 
         };
 
-        // GỌI THƯ VIỆN BẰNG ĐÚNG CÚ PHÁP CỦA NÓ 
+        // BẮT ĐẦU VẼ QR RỒI TRUYỀN VÀO HÀM IN
         if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
-            QRCode.toDataURL(shareUrl, { width: 150, margin: 1, color: { dark: '#000000', light: '#ffffff' } }, function (err, url) {
+            QRCode.toDataURL(shareUrl, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } }, function (err, url) {
                 if (err) { alert("Lỗi tạo QR"); return; }
                 doPrint(url);
             });
         } else {
-            // Backup phòng hờ nếu mất mạng
-            doPrint(`https://quickchart.io/qr?text=${encodeURIComponent(shareUrl)}&size=150`);
+            doPrint(`https://quickchart.io/qr?text=${encodeURIComponent(shareUrl)}&size=200`);
         }
 
     } catch(err) {
