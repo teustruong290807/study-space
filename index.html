@@ -235,17 +235,29 @@
                 <h2 style="margin-top: 0;">🛠 Quản lý Kho Từ Vựng</h2>
                 <input type="text" id="vocab-topic-input" placeholder="Tên Chủ đề (VD: Tuần 1)...">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <select id="vocab-type-input">
-                        <option value="word">Từ vựng</option>
-                        <option value="structure">Cấu trúc</option>
+                    <select id="vocab-level-input" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main);">
+                        <option value="None">-- Chọn Cấp độ --</option>
+                        <option value="A1">Cấp độ: A1</option>
+                        <option value="A2">Cấp độ: A2</option>
+                        <option value="B1">Cấp độ: B1</option>
+                        <option value="B2">Cấp độ: B2</option>
+                        <option value="C1">Cấp độ: C1</option>
+                        <option value="C2">Cấp độ: C2</option>
                     </select>
+                    
+                    <select id="vocab-type-input" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main);">
+                        <option value="word">Từ đơn (Word)</option>
+                        <option value="phrase">Cụm từ (Phrase)</option>
+                        <option value="collo">Kết hợp từ (Collocation)</option>
+                    </select>
+
                     <input type="text" id="vocab-en-input" placeholder="Tiếng Anh...">
                     <input type="text" id="vocab-vi-input" placeholder="Tiếng Việt...">
                     <input type="text" id="vocab-ipa-input" placeholder="Phiên âm (Tùy chọn)...">
                     <input type="text" id="vocab-pos-input" placeholder="Từ loại (Tùy chọn)...">
-                    <input type="text" id="vocab-syn-input" placeholder="Đồng nghĩa (Tùy chọn)...">
+                    <input type="text" id="vocab-syn-input" placeholder="Đồng/Trái nghĩa (VD: big | small)..." style="grid-column: span 2;">
                 </div>
-                <button class="btn btn-primary" style="width: 100%; margin-bottom: 30px;" onclick="saveNewVocab()">Thêm vào kho</button>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 15px; margin-bottom: 30px;" onclick="saveNewVocab()">Thêm vào kho</button>
                 
                 <h3 style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Nhập hàng loạt:</h3>
                 <textarea id="vocab-bulk-input" placeholder="Dán bảng dữ liệu Excel/AI vào đây..." style="height: 100px;"></textarea>
