@@ -1101,6 +1101,12 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
     .content-area {
         padding-bottom: 200px !important;
     }
+
+    /* Giấu các nút gốc trên mobile vì đã có thanh Sticky lo liệu */
+    #normal-submit-btn, #cluster-submit-btn, #reading-submit-btn, #writing-submit-btn, #short-submit-btn,
+    #options-container > div:last-child {
+        display: none !important;
+    }
 }
 
 /* 3. Style riêng cho các nút trong thanh ghim */
