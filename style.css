@@ -1103,7 +1103,7 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
     }
 
     /* Giấu các nút gốc trên mobile vì đã có thanh Sticky lo liệu */
-    #normal-submit-btn, #cluster-submit-btn, #reading-submit-btn, #writing-submit-btn, #short-submit-btn,
+    #normal-submit-btn, #cluster-submit-btn, #reading-submit-btn, #writing-submit-btn, #short-submit-btn, #next-btn,
     #options-container > div:last-child {
         display: none !important;
     }
