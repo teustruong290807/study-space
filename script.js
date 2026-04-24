@@ -3416,7 +3416,8 @@ function handleSwipeGesture() {
             }
         } else {
             // VUỐT PHẢI -> LÙI LẠI CÂU TRƯỚC
-            if (currentQuestionIndex > 0) {
+            // [MỚI] CHỈ cho phép vuốt lùi khi đang ở Chế độ Kiểm tra (isTestMode = true)
+            if (isTestMode && currentQuestionIndex > 0) {
                 currentQuestionIndex--; renderQuestion();
             }
         }
