@@ -246,6 +246,8 @@ function showScreen(screenId) {
     if (window.innerWidth <= 768) {
         document.getElementById('app-sidebar')?.classList.add('collapsed');
     }
+   // [MỚI] 6. DỌN DẸP THANH GHIM KHI THOÁT MÀN HÌNH BÀI LÀM
+    if (typeof syncStickyActionBar === 'function') syncStickyActionBar();
 }
 
 function goHome() {
@@ -1034,7 +1036,7 @@ function renderQuestion() {
 
             btn.onclick = function() { 
                 const now = Date.now();
-                const isDoubleTap = (now - lastTapTime < 400); // Nếu chạm lần 2 cách lần 1 dưới 400ms -> Là Double Tap
+                const isDoubleTap = (now - lastTapTime < 400); // Chạm lần 2 dưới 400ms là Double Tap
                 lastTapTime = now;
 
                 if (isTestMode) {
@@ -1042,17 +1044,15 @@ function renderQuestion() {
                     optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                     this.classList.add('selected'); updateDashboard();
                 } else { 
-                    // Chặn không cho bấm nữa nếu đã đúng và hiện nút Next
                     if (!document.getElementById('next-btn').classList.contains('hidden')) return;
                     
-                    // LÔ-GÍC DOUBLE TAP VÀ CHẠM LẠI CHUẨN XÁC
+                    // LÔ-GÍC DOUBLE TAP
                     if (this.classList.contains('selected') || isDoubleTap) {
                         const submitBtn = document.getElementById('normal-submit-btn');
                         if (submitBtn && !submitBtn.classList.contains('hidden')) submitBtn.click();
                         return;
                     }
 
-                    // Chạm lần 1
                     optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                     this.classList.add('selected');
                     practiceSelectedOpt = opt; practiceSelectedBtn = this;
@@ -3408,14 +3408,14 @@ function handleSwipeGesture() {
             if (currentQuestionIndex < currentQuizQuestions.length - 1) {
                 const nextBtn = document.getElementById('next-btn');
                 if (isTestMode) {
-                    currentQuestionIndex++; renderQuestion(); // Chế độ Test cho phép lướt tự do
+                    currentQuestionIndex++; renderQuestion(); 
                 } else if (nextBtn && !nextBtn.classList.contains('hidden')) {
                     // Chế độ Luyện Tập: BẮT BUỘC có nút Next (Đã trả lời đúng) mới cho lướt
                     nextBtn.click();
                 }
             }
         } else {
-            // VUỐT PHẢI -> LÙI LẠI CÂU TRƯỚC (Áp dụng cho mọi chế độ)
+            // VUỐT PHẢI -> LÙI LẠI CÂU TRƯỚC
             if (currentQuestionIndex > 0) {
                 currentQuestionIndex--; renderQuestion();
             }
@@ -4400,9 +4400,9 @@ function syncStickyActionBar() {
     const actionBar = document.getElementById('mobile-action-bar');
     if (!actionBar) return;
 
-    // NẾU ĐÃ THOÁT KHỎI BÀI LÀM -> ẨN THANH GHIM NGAY LẬP TỨC VÀ DỌN DẸP
+    // NẾU KHÔNG Ở MÀN HÌNH BÀI LÀM -> ẨN THANH GHIM
     const practiceScreen = document.getElementById('screen-practice');
-    if (practiceScreen.classList.contains('hidden')) {
+    if (practiceScreen && practiceScreen.classList.contains('hidden')) {
         actionBar.style.display = 'none';
         actionBar.innerHTML = '';
         return;
@@ -4445,7 +4445,7 @@ function syncStickyActionBar() {
     if (actionBar.innerHTML.trim() === '') {
         actionBar.style.display = 'none';
     } else {
-        actionBar.style.display = ''; 
+        actionBar.style.display = 'flex'; 
     }
 }
 
