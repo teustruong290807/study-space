@@ -884,12 +884,27 @@ function renderQuestion() {
                     if (isTestMode && testAnswers[currentQuestionIndex][idx] === opt) btn.classList.add('selected');
 
                     btn.onclick = function() { 
-                        if (isTestMode) {
-                            testAnswers[currentQuestionIndex][idx] = opt;
-                            subBlock.querySelectorAll('.sub-option-btn').forEach(b => b.classList.remove('selected'));
-                            this.classList.add('selected'); updateDashboard();
-                        } else { selectReadingAnswer(idx, opt, this); }
-                    };
+                if (isTestMode) {
+                    testAnswers[currentQuestionIndex] = opt;
+                    optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected'); updateDashboard();
+                } else { 
+                    if (!document.getElementById('next-btn').classList.contains('hidden')) return;
+                    
+                    // LÔ-GÍC DOUBLE TAP (CHẠM KÉP)
+                    if (this.classList.contains('selected')) {
+                        // Nếu nút này đang sáng (đã chạm lần 1) -> Chạm phát nữa là CHỐT luôn!
+                        const submitBtn = document.getElementById('normal-submit-btn');
+                        if (submitBtn && !submitBtn.classList.contains('hidden')) submitBtn.click();
+                        return;
+                    }
+
+                    // Chạm lần 1: Xóa sáng nút cũ, bật sáng nút mới
+                    optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    practiceSelectedOpt = opt; practiceSelectedBtn = this;
+                }
+            };
                     subBlock.appendChild(btn);
                 });
             }
@@ -3365,7 +3380,6 @@ if (practiceScreenEl) {
 }
 
 function handleSwipeGesture() {
-    // Chỉ kích hoạt khi đang ở màn hình làm bài
     if (practiceScreenEl.classList.contains('hidden')) return;
 
     const deltaX = touchEndX - touchStartX;
@@ -3373,20 +3387,24 @@ function handleSwipeGesture() {
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
-    // Tính toán: Phải là vuốt ngang (trục X) và khoảng cách vuốt phải lớn hơn 60px để tránh nhận nhầm khi cuộn lên xuống
+    // Vuốt ngang và lực vuốt > 60px
     if (absX > 60 && absX > absY) {
         if (deltaX < 0) {
-            // VUỐT TỪ PHẢI SANG TRÁI (Swipe Left) -> Chuyển câu tiếp theo
-            const nextBtn = document.getElementById('next-btn');
-            // Chỉ cho phép vuốt qua bài khi nút Next đã hiện (tức là đã chọn đáp án)
-            if (nextBtn && !nextBtn.classList.contains('hidden')) {
-                nextBtn.click();
+            // VUỐT TRÁI -> QUA CÂU TIẾP THEO
+            if (currentQuestionIndex < currentQuizQuestions.length - 1) {
+                const nextBtn = document.getElementById('next-btn');
+                // Nếu đã chọn xong (có nút next) -> kích hoạt Next bình thường để lưu điểm
+                if (!isTestMode && nextBtn && !nextBtn.classList.contains('hidden')) {
+                    nextBtn.click();
+                } else {
+                    // Chế độ Test hoặc Luyện tập nhưng muốn ÉP lướt qua câu
+                    currentQuestionIndex++; renderQuestion();
+                }
             }
         } else {
-            // VUỐT TỪ TRÁI SANG PHẢI (Swipe Right) -> Lùi câu (Nếu hệ thống của bạn có nút Prev)
-            const prevBtn = document.getElementById('prev-btn');
-            if (prevBtn && !prevBtn.classList.contains('hidden')) {
-                prevBtn.click();
+            // VUỐT PHẢI -> LÙI LẠI CÂU TRƯỚC (Áp dụng cho mọi chế độ)
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--; renderQuestion();
             }
         }
     }
@@ -4361,3 +4379,54 @@ function executePrintVocab() {
         alert("Lỗi in: " + err.message);
     }
 }
+
+/* ==========================================================================
+   NÂNG CẤP MOBILE UX (STICKY BAR TỰ ĐỘNG)
+========================================================================== */
+function syncStickyActionBar() {
+    const actionBar = document.getElementById('mobile-action-bar');
+    if (!actionBar) return;
+    actionBar.innerHTML = '';
+
+    if (isTestMode) {
+        // Lấy cụm nút điều hướng trong chế độ Test
+        const testNavDiv = document.querySelector('#options-container > div:last-child');
+        if (testNavDiv && testNavDiv.querySelectorAll('button').length > 0) {
+            testNavDiv.querySelectorAll('button').forEach(btn => {
+                const newBtn = document.createElement('button');
+                newBtn.className = btn.className + ' sticky-btn';
+                newBtn.innerHTML = btn.innerHTML;
+                newBtn.disabled = btn.disabled;
+                newBtn.onclick = () => btn.click();
+                actionBar.appendChild(newBtn);
+            });
+        }
+    } else {
+        // Lấy nút Chốt hoặc Next trong chế độ Luyện tập
+        const submitBtn = document.querySelector('#normal-submit-btn:not(.hidden), #cluster-submit-btn:not(.hidden), #reading-submit-btn:not(.hidden), #writing-submit-btn:not(.hidden), #short-submit-btn:not(.hidden)');
+        const nextBtn = document.getElementById('next-btn');
+
+        if (submitBtn) {
+            const newBtn = document.createElement('button');
+            newBtn.className = submitBtn.className + ' sticky-btn';
+            newBtn.innerHTML = submitBtn.innerHTML;
+            newBtn.onclick = () => submitBtn.click();
+            actionBar.appendChild(newBtn);
+        } else if (nextBtn && !nextBtn.classList.contains('hidden')) {
+            const newBtn = document.createElement('button');
+            newBtn.className = nextBtn.className + ' sticky-btn';
+            newBtn.innerHTML = nextBtn.innerHTML;
+            newBtn.onclick = () => nextBtn.click();
+            actionBar.appendChild(newBtn);
+        }
+    }
+}
+
+// Bật lính gác theo dõi giao diện
+const uiObserver = new MutationObserver(() => syncStickyActionBar());
+document.addEventListener('DOMContentLoaded', () => {
+    const optsContainer = document.getElementById('options-container');
+    const nextBtn = document.getElementById('next-btn');
+    if (optsContainer) uiObserver.observe(optsContainer, { childList: true, subtree: true });
+    if (nextBtn) uiObserver.observe(nextBtn, { attributes: true, attributeFilter: ['class'] });
+});
