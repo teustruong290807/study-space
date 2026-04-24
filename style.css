@@ -1065,3 +1065,57 @@ body.light-mode #mm-svg text {
 }
 input:checked + .toggle-slider { background-color: var(--primary); }
 input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+/* ==========================================================================
+   NÂNG CẤP MOBILE UX: STICKY ACTION BAR & DOUBLE TAP AREA
+========================================================================== */
+
+/* 1. Thanh công cụ ghim dưới đáy (Nằm trên Bottom Nav) */
+.mobile-sticky-actions {
+    display: none; /* Mặc định ẩn trên máy tính */
+    position: fixed;
+    bottom: 75px; /* Đẩy lên trên thanh Bottom Nav (khoảng 70-80px) */
+    left: 15px;
+    right: 15px;
+    background: rgba(10, 22, 30, 0.85); /* Màu tối của App + mờ ảo */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 12px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    z-index: 1000;
+    box-shadow: 0 -8px 25px rgba(0,0,0,0.3);
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    animation: fadeInUp 0.4s ease;
+}
+
+/* 2. Ép hiển thị thanh này trên điện thoại (Dưới 850px) */
+@media (max-width: 850px) {
+    .mobile-sticky-actions {
+        display: flex; 
+    }
+    
+    /* Đẩy vùng nội dung lên cao hơn nữa để không bị thanh ghim che mất chữ cuối cùng */
+    .content-area {
+        padding-bottom: 200px !important;
+    }
+}
+
+/* 3. Style riêng cho các nút trong thanh ghim */
+.sticky-btn {
+    flex: 1;
+    padding: 12px 5px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+    border-radius: 12px !important;
+    justify-content: center !important;
+}
+
+/* 4. Hiệu ứng cho phương án khi bị chọn (Hỗ trợ nhìn Double Tap rõ hơn) */
+.option-btn.selected {
+    border-color: var(--primary) !important;
+    background: rgba(15, 77, 95, 0.2) !important;
+    transform: scale(0.98);
+}
