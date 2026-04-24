@@ -1023,6 +1023,7 @@ function renderQuestion() {
         }
         
         let practiceSelectedOpt = null; let practiceSelectedBtn = null;
+        let lastTapTime = 0; // Bộ đếm thời gian cho Double Tap
 
         displayOptions.forEach((opt, idx) => {
             const btn = document.createElement('button'); btn.className = 'option-btn';
@@ -1032,12 +1033,26 @@ function renderQuestion() {
             if (isTestMode && testAnswers[currentQuestionIndex] === opt) btn.classList.add('selected');
 
             btn.onclick = function() { 
+                const now = Date.now();
+                const isDoubleTap = (now - lastTapTime < 400); // Nếu chạm lần 2 cách lần 1 dưới 400ms -> Là Double Tap
+                lastTapTime = now;
+
                 if (isTestMode) {
                     testAnswers[currentQuestionIndex] = opt;
                     optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                     this.classList.add('selected'); updateDashboard();
                 } else { 
+                    // Chặn không cho bấm nữa nếu đã đúng và hiện nút Next
                     if (!document.getElementById('next-btn').classList.contains('hidden')) return;
+                    
+                    // LÔ-GÍC DOUBLE TAP VÀ CHẠM LẠI CHUẨN XÁC
+                    if (this.classList.contains('selected') || isDoubleTap) {
+                        const submitBtn = document.getElementById('normal-submit-btn');
+                        if (submitBtn && !submitBtn.classList.contains('hidden')) submitBtn.click();
+                        return;
+                    }
+
+                    // Chạm lần 1
                     optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                     this.classList.add('selected');
                     practiceSelectedOpt = opt; practiceSelectedBtn = this;
@@ -3387,18 +3402,16 @@ function handleSwipeGesture() {
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
-    // Vuốt ngang và lực vuốt > 60px
     if (absX > 60 && absX > absY) {
         if (deltaX < 0) {
             // VUỐT TRÁI -> QUA CÂU TIẾP THEO
             if (currentQuestionIndex < currentQuizQuestions.length - 1) {
                 const nextBtn = document.getElementById('next-btn');
-                // Nếu đã chọn xong (có nút next) -> kích hoạt Next bình thường để lưu điểm
-                if (!isTestMode && nextBtn && !nextBtn.classList.contains('hidden')) {
+                if (isTestMode) {
+                    currentQuestionIndex++; renderQuestion(); // Chế độ Test cho phép lướt tự do
+                } else if (nextBtn && !nextBtn.classList.contains('hidden')) {
+                    // Chế độ Luyện Tập: BẮT BUỘC có nút Next (Đã trả lời đúng) mới cho lướt
                     nextBtn.click();
-                } else {
-                    // Chế độ Test hoặc Luyện tập nhưng muốn ÉP lướt qua câu
-                    currentQuestionIndex++; renderQuestion();
                 }
             }
         } else {
@@ -4386,10 +4399,18 @@ function executePrintVocab() {
 function syncStickyActionBar() {
     const actionBar = document.getElementById('mobile-action-bar');
     if (!actionBar) return;
+
+    // NẾU ĐÃ THOÁT KHỎI BÀI LÀM -> ẨN THANH GHIM NGAY LẬP TỨC VÀ DỌN DẸP
+    const practiceScreen = document.getElementById('screen-practice');
+    if (practiceScreen.classList.contains('hidden')) {
+        actionBar.style.display = 'none';
+        actionBar.innerHTML = '';
+        return;
+    }
+
     actionBar.innerHTML = '';
 
     if (isTestMode) {
-        // Lấy cụm nút điều hướng trong chế độ Test
         const testNavDiv = document.querySelector('#options-container > div:last-child');
         if (testNavDiv && testNavDiv.querySelectorAll('button').length > 0) {
             testNavDiv.querySelectorAll('button').forEach(btn => {
@@ -4402,7 +4423,6 @@ function syncStickyActionBar() {
             });
         }
     } else {
-        // Lấy nút Chốt hoặc Next trong chế độ Luyện tập
         const submitBtn = document.querySelector('#normal-submit-btn:not(.hidden), #cluster-submit-btn:not(.hidden), #reading-submit-btn:not(.hidden), #writing-submit-btn:not(.hidden), #short-submit-btn:not(.hidden)');
         const nextBtn = document.getElementById('next-btn');
 
@@ -4419,6 +4439,13 @@ function syncStickyActionBar() {
             newBtn.onclick = () => nextBtn.click();
             actionBar.appendChild(newBtn);
         }
+    }
+
+    // NẾU THANH TRỐNG RỖNG THÌ ẨN ĐI, CÓ NÚT THÌ HIỆN LÊN LẠI
+    if (actionBar.innerHTML.trim() === '') {
+        actionBar.style.display = 'none';
+    } else {
+        actionBar.style.display = ''; 
     }
 }
 
