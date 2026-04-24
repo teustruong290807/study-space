@@ -3395,6 +3395,7 @@ if (practiceScreenEl) {
 }
 
 function handleSwipeGesture() {
+    // Chỉ kích hoạt khi đang ở màn hình làm bài
     if (practiceScreenEl.classList.contains('hidden')) return;
 
     const deltaX = touchEndX - touchStartX;
@@ -3402,23 +3403,31 @@ function handleSwipeGesture() {
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
+    // Tính toán: Phải là vuốt ngang (trục X) và khoảng cách vuốt > 60px
     if (absX > 60 && absX > absY) {
         if (deltaX < 0) {
-            // VUỐT TRÁI -> QUA CÂU TIẾP THEO
-            if (currentQuestionIndex < currentQuizQuestions.length - 1) {
+            // 1. VUỐT TRÁI (Swipe Left) -> QUA CÂU TIẾP THEO
+            if (isTestMode) {
+                // Kiểm tra: Tự do lướt tới
+                if (currentQuestionIndex < currentQuizQuestions.length - 1) {
+                    currentQuestionIndex++; 
+                    renderQuestion();
+                }
+            } else {
+                // Luyện tập: BẮT BUỘC phải có nút Next (đã làm đúng) mới được lướt qua
                 const nextBtn = document.getElementById('next-btn');
-                if (isTestMode) {
-                    currentQuestionIndex++; renderQuestion(); 
-                } else if (nextBtn && !nextBtn.classList.contains('hidden')) {
-                    // Chế độ Luyện Tập: BẮT BUỘC có nút Next (Đã trả lời đúng) mới cho lướt
+                if (nextBtn && !nextBtn.classList.contains('hidden')) {
                     nextBtn.click();
                 }
             }
         } else {
-            // VUỐT PHẢI -> LÙI LẠI CÂU TRƯỚC
-            // [MỚI] CHỈ cho phép vuốt lùi khi đang ở Chế độ Kiểm tra (isTestMode = true)
-            if (isTestMode && currentQuestionIndex > 0) {
-                currentQuestionIndex--; renderQuestion();
+            // 2. VUỐT PHẢI (Swipe Right) -> LÙI LẠI CÂU TRƯỚC
+            // KHÓA HOÀN TOÀN TÍNH NĂNG NÀY NẾU KHÔNG PHẢI LÀ CHẾ ĐỘ KIỂM TRA
+            if (isTestMode) {
+                if (currentQuestionIndex > 0) {
+                    currentQuestionIndex--; 
+                    renderQuestion();
+                }
             }
         }
     }
