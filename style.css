@@ -1138,3 +1138,10 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
     background: rgba(15, 77, 95, 0.2) !important;
     transform: scale(0.98);
 }
+
+/* KHÓA CHẶT THANH MOBILE ACTION BAR TRÊN GIAO DIỆN MÁY TÍNH */
+@media (min-width: 851px) {
+    .mobile-sticky-actions, #mobile-action-bar {
+        display: none !important;
+    }
+}
