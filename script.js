@@ -582,7 +582,7 @@ function parseTextToJSON(text) {
                     if (currentGroup) {
                         if (currentGroup.questions.length === 1 && !currentGroup.translation) { 
                             let sq = currentGroup.questions[0]; 
-                            sq.content = `<div style="color:var(--primary); font-weight:bold; margin-bottom:10px;">${currentGroup.context}</div>\n${sq.content}`; 
+                            sq.content = `<div class="quiz-instruction">${currentGroup.context}</div>\n${sq.content}`; 
                             groupedParsed.push(sq); 
                         } 
                         else { groupedParsed.push(currentGroup); }
@@ -593,20 +593,20 @@ function parseTextToJSON(text) {
                 if (currentGroup) {
                     if (currentGroup.questions.length === 1 && !currentGroup.translation) { 
                         let sq = currentGroup.questions[0]; 
-                        sq.content = `<div style="color:var(--primary); font-weight:bold; margin-bottom:10px;">${currentGroup.context}</div>\n${sq.content}`; 
+                        sq.content = `<div class="quiz-instruction">${currentGroup.context}</div>\n${sq.content}`; 
                         groupedParsed.push(sq); 
                     } 
                     else { groupedParsed.push(currentGroup); } 
                     currentGroup = null;
                 }
-                if (ctxStr) q.content = `<div style="color:var(--primary); font-weight:bold; margin-bottom:10px;">${ctxStr}</div>\n${q.content}`;
+                if (ctxStr) q.content = `<div class="quiz-instruction">${ctxStr}</div>\n${q.content}`;
                 groupedParsed.push(q);
             }
         } else {
             if (currentGroup) {
                 if (currentGroup.questions.length === 1 && !currentGroup.translation) { 
                     let sq = currentGroup.questions[0]; 
-                    sq.content = `<div style="color:var(--primary); font-weight:bold; margin-bottom:10px;">${currentGroup.context}</div>\n${sq.content}`; 
+                    sq.content = `<div class="quiz-instruction">${currentGroup.context}</div>\n${sq.content}`; 
                     groupedParsed.push(sq); 
                 } 
                 else { groupedParsed.push(currentGroup); } 
