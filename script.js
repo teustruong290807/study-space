@@ -37,20 +37,6 @@ const CLOUD_API_URL = 'https://script.google.com/macros/s/AKfycbxJ7flmxYRTQVcq3X
 
 let userProgress = {};
 
-function formatText(text) {
-    // Nếu không có nội dung thì trả về rỗng để khỏi lỗi
-    if (!text) return "";
-    
-    // Màng lọc tự động: Quét thấy yêu cầu đề là tự động bọc Class in đậm
-    let result = text.replace(/(Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
-        // Nếu câu lệnh đó đã được bọc class rồi thì bỏ qua, chưa có thì bọc lại
-        if (match.includes('quiz-instruction')) return match;
-        return `<div class="quiz-instruction">${match}</div>`;
-    });
-    
-    return result;
-}
-
 function getQueryParams() {
     const params = new URLSearchParams(window.location.search);
     return {
@@ -69,13 +55,23 @@ function cleanOpt(text) {
                .trim();
 }
 
-const formatText = (text) => {
+function formatText(text) {
     if (!text) return "";
-    return text
+    
+    // 1. Màng lọc tự động: Bọc Class in đậm cho các câu yêu cầu đề bài
+    let result = text.replace(/(Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
+        if (match.includes('quiz-instruction')) return match;
+        return `<div class="quiz-instruction">${match}</div>`;
+    });
+    
+    // 2. Xử lý hiển thị Ảnh, Audio và tự động xuống dòng
+    result = result
         .replace(/\[IMG:\s*(https?:\/\/[^\]]+)\]/gi, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin: 15px 0;"/><br>')
         .replace(/\[AUDIO:\s*(https?:\/\/[^\]]+)\]/gi, '<br><audio controls style="width: 100%; outline: none; border-radius: 8px; background-color: rgba(0,0,0,0.05); margin: 15px 0;"><source src="$1" type="audio/mpeg">Trình duyệt không hỗ trợ phát âm thanh.</audio><br>')
         .replace(/\n/g, '<br>');
-};
+        
+    return result;
+}
 
 // [MỚI] Hàm lấy link Embed Youtube
 function getYoutubeEmbedUrl(url) {
