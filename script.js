@@ -818,20 +818,21 @@ function renderQuestion() {
         const splitWrapper = document.createElement('div'); splitWrapper.className = 'split-layout';
         const leftCol = document.createElement('div'); leftCol.className = 'split-left';
         
-        // --- THUẬT TOÁN TÁCH YÊU CẦU ĐỀ (INSTRUCTION) ---
+        // --- THUẬT TOÁN TÁCH YÊU CẦU ĐỀ (MỚI) ---
         let contextHTML = "";
         let contextLines = q.context.split(/<br>|\n/);
         let firstLine = contextLines[0].replace(/<[^>]+>/g, '').trim();
         
-        // Nhận diện các từ khóa yêu cầu đề quen thuộc
-        if (/(mark|choose|chọn|indicate|read|đọc|điền)/i.test(firstLine) && firstLine.length > 15) {
+        // Nếu dòng đầu là yêu cầu, ta dùng class .quiz-instruction đã tạo ở trên
+        if (/(mark|choose|chọn|indicate|read|đọc|điền|hoàn thành)/i.test(firstLine) && firstLine.length > 15) {
             let instruction = contextLines.shift();
-            contextHTML += `<div style="font-style: italic; font-weight: bold; margin-bottom: 15px; color: var(--primary); font-size: 16px;">${formatText(instruction)}</div>`;
+            contextHTML += `<div class="quiz-instruction">${formatText(instruction)}</div>`;
         }
         
         let passageText = contextLines.join('<br>');
         if (passageText.trim()) {
-            contextHTML += `<div class="reading-passage" style="margin-bottom: 0;">${formatText(passageText)}</div>`;
+            // Phần văn bản này sẽ hiển thị font chữ mỏng (400) cho dễ nhìn
+            contextHTML += `<div class="reading-passage">${formatText(passageText)}</div>`;
         }
         
         const passageWrapper = document.createElement('div');
