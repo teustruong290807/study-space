@@ -1145,3 +1145,10 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
         display: none !important;
     }
 }
+
+/* Chống rớt dòng lộn xộn cho các nút đáp án A B C D */
+.option-btn, .sub-option-btn {
+    display: flex !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+}
