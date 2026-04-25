@@ -58,10 +58,10 @@ function cleanOpt(text) {
 function formatText(text) {
     if (!text) return "";
     
-    // 1. Màng lọc tự động: Đã nâng cấp để GOM cả chữ "Câu/Question X" vào chung 1 dòng
+    // 1. Màng lọc tự động: Đã nâng cấp để GOM cả chữ "Câu X:" vào chung với yêu cầu đề
     let result = text.replace(/(?:(?:Câu|Question|Bài)\s*\d+[\.\:\-]?\s*)?(?:Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
         if (match.includes('quiz-instruction')) return match;
-        return `<div class="quiz-instruction">${match}</div>`;
+        return `<div class="quiz-instruction" style="display: inline-block; width: 100%;">${match}</div>`;
     });
     
     // 2. Xử lý hiển thị Ảnh, Audio và tự động xuống dòng
