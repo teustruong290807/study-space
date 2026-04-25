@@ -4456,7 +4456,7 @@ function syncStickyActionBar() {
     if (actionBar.innerHTML.trim() === '') {
         actionBar.style.display = 'none';
     } else {
-        actionBar.style.display = 'flex'; 
+        actionBar.style.display = ''; 
     }
 }
 
