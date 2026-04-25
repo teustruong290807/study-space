@@ -37,6 +37,20 @@ const CLOUD_API_URL = 'https://script.google.com/macros/s/AKfycbxJ7flmxYRTQVcq3X
 
 let userProgress = {};
 
+function formatText(text) {
+    // Nếu không có nội dung thì trả về rỗng để khỏi lỗi
+    if (!text) return "";
+    
+    // Màng lọc tự động: Quét thấy yêu cầu đề là tự động bọc Class in đậm
+    let result = text.replace(/(Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
+        // Nếu câu lệnh đó đã được bọc class rồi thì bỏ qua, chưa có thì bọc lại
+        if (match.includes('quiz-instruction')) return match;
+        return `<div class="quiz-instruction">${match}</div>`;
+    });
+    
+    return result;
+}
+
 function getQueryParams() {
     const params = new URLSearchParams(window.location.search);
     return {
