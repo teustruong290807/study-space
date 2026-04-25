@@ -58,13 +58,16 @@ function cleanOpt(text) {
 function formatText(text) {
     if (!text) return "";
     
-    // 1. Màng lọc tự động: Đã nâng cấp để GOM cả chữ "Câu X:" vào chung với yêu cầu đề
-    let result = text.replace(/(?:(?:Câu|Question|Bài)\s*\d+[\.\:\-]?\s*)?(?:Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
-        if (match.includes('quiz-instruction')) return match;
-        return `<div class="quiz-instruction" style="display: inline-block; width: 100%;">${match}</div>`;
+    // 1. Màng lọc siêu cấp: Quét từ đầu lệnh đến tận dấu chấm câu (.)
+    let result = text.replace(/(?:(?:Câu|Question|Bài)\s*\d+[\.\:\-]?\s*)?(?:Mark the|Read the|Choose the|Indicate the|Đọc đoạn|Chọn đáp)[\s\S]{10,250}?(?:\.|\:)/gi, function(match) {
+        // Hút các chữ bị đứt dòng do lỗi PDF lên cùng 1 hàng ngang
+        let cleanMatch = match.replace(/<br>|\n/g, ' '); 
+        
+        if (cleanMatch.includes('quiz-instruction')) return match;
+        return `<div class="quiz-instruction">${cleanMatch}</div>`;
     });
     
-    // 2. Xử lý hiển thị Ảnh, Audio và tự động xuống dòng
+    // 2. Xử lý hiển thị Ảnh, Audio và tự động xuống dòng cho phần nội dung
     result = result
         .replace(/\[IMG:\s*(https?:\/\/[^\]]+)\]/gi, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin: 15px 0;"/><br>')
         .replace(/\[AUDIO:\s*(https?:\/\/[^\]]+)\]/gi, '<br><audio controls style="width: 100%; outline: none; border-radius: 8px; background-color: rgba(0,0,0,0.05); margin: 15px 0;"><source src="$1" type="audio/mpeg">Trình duyệt không hỗ trợ phát âm thanh.</audio><br>')
