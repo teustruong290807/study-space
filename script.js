@@ -58,8 +58,8 @@ function cleanOpt(text) {
 function formatText(text) {
     if (!text) return "";
     
-    // 1. Màng lọc tự động: Bọc Class in đậm cho các câu yêu cầu đề bài
-    let result = text.replace(/(Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
+    // 1. Màng lọc tự động: Đã nâng cấp để GOM cả chữ "Câu/Question X" vào chung 1 dòng
+    let result = text.replace(/(?:(?:Câu|Question|Bài)\s*\d+[\.\:\-]?\s*)?(?:Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[^\n<]+/gi, function(match) {
         if (match.includes('quiz-instruction')) return match;
         return `<div class="quiz-instruction">${match}</div>`;
     });
