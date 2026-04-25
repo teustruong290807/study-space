@@ -1152,3 +1152,33 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
     align-items: flex-start !important;
     text-align: left !important;
 }
+
+/* ĐỒNG BỘ TRÊN WEB */
+.quiz-instruction {
+    font-weight: bold !important; /* Ép in đậm toàn bộ câu lệnh */
+    font-style: normal !important; /* Bỏ in nghiêng để nhất quán */
+    color: var(--primary);
+    margin-bottom: 12px;
+    display: block;
+    line-height: 1.5;
+}
+
+.quiz-instruction b {
+    font-weight: 900 !important; /* Chữ "Câu X:" sẽ đậm rõ nét hơn */
+}
+
+/* ĐỒNG BỘ KHI IN PDF */
+@media print {
+    .quiz-instruction {
+        color: #000 !important;
+        font-weight: bold !important;
+        font-style: normal !important; /* Ép thẳng chữ, không in nghiêng */
+        font-size: 13pt !important;
+        margin-bottom: 10px !important;
+        display: block !important;
+    }
+    
+    .quiz-instruction b {
+        font-weight: bold !important;
+    }
+}
