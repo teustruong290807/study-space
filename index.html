@@ -263,21 +263,34 @@
                 <textarea id="vocab-bulk-input" placeholder="Dán bảng dữ liệu Excel/AI vào đây..." style="height: 100px;"></textarea>
                 <button class="btn btn-secondary" style="width: 100%; margin-bottom: 30px;" onclick="saveBulkVocab()">Xử lý hàng loạt</button>
 
+                <div class="vocab-filter-bar" style="display: flex; gap: 12px; align-items: center; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--primary); font-size: 14px; font-weight: bold; white-space: nowrap;">🔍 Lọc chủ đề:</span>
+                        <select id="manage-vocab-filter" class="form-control" style="margin: 0; padding: 8px 12px; flex: 1; border-color: var(--primary);" onchange="filterVocabTable()">
+                            <option value="ALL">Tất cả chủ đề</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: var(--danger); padding: 8px 16px; font-size: 14px;" onclick="deleteTopicBulk()">
+                        🗑️ Xóa sạch chủ đề đang lọc
+                    </button>
+                </div>
+
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                     <h3 style="margin: 0;">Danh sách (<span id="vocab-total-count">0</span>)</h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
-    <button class="btn btn-secondary btn-sm" onclick="openPrintVocabModal()" style="color: var(--primary); border-color: var(--primary);">
-        <i class="ph-bold ph-printer"></i> In Từ Vựng
-    </button>
-    <div id="vocab-select-all-container" class="hidden" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-        <input type="checkbox" id="vocab-select-all" onchange="toggleSelectAllVocab()" style="margin: 0; width: 16px; height: 16px; cursor: pointer;">
-        <label for="vocab-select-all" style="font-size: 14px; margin: 0; cursor: pointer; font-weight: bold; color: var(--primary);">Chọn hết</label>
-    </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openPrintVocabModal()" style="color: var(--primary); border-color: var(--primary);">
+                            <i class="ph-bold ph-printer"></i> In Từ Vựng
+                        </button>
+                        <div id="vocab-select-all-container" class="hidden" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <input type="checkbox" id="vocab-select-all" onchange="toggleSelectAllVocab()" style="margin: 0; width: 16px; height: 16px; cursor: pointer;">
+                            <label for="vocab-select-all" style="font-size: 14px; margin: 0; cursor: pointer; font-weight: bold; color: var(--primary);">Chọn hết</label>
+                        </div>
 
-    <button id="btn-toggle-bulk" class="btn btn-secondary btn-sm" onclick="toggleVocabBulkDelete()">Chọn nhiều</button>
-    <button id="btn-confirm-bulk" class="btn btn-danger btn-sm hidden" onclick="deleteSelectedVocabs()">Xóa đã chọn</button>
-</div>
+                        <button id="btn-toggle-bulk" class="btn btn-secondary btn-sm" onclick="toggleVocabBulkDelete()">Chọn nhiều</button>
+                        <button id="btn-confirm-bulk" class="btn btn-danger btn-sm hidden" onclick="deleteSelectedVocabs()">Xóa đã chọn</button>
+                    </div>
                 </div>
+                
                 <div id="vocab-manage-list"></div>
             </div>
 
@@ -302,49 +315,48 @@
                     </div>
 
                     <div class="bento-card bento-action">
-    <h3>Vào Học Ngay 🚀</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">Chọn chủ đề và chế độ thử thách của em.</p>
-    
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-    <select id="vocab-topic-select" style="flex: 1; border-color: var(--primary); margin-bottom: 0;"></select>
-    <button class="btn btn-secondary" onclick="shareVocabQR()" title="Chia sẻ Bài tập Từ vựng" style="padding: 0 15px; border-color: var(--primary); color: var(--primary);">
-        <i class="ph-bold ph-qr-code" style="font-size: 20px;"></i>
-    </button>
-</div>
+                        <h3>Vào Học Ngay 🚀</h3>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">Chọn chủ đề và chế độ thử thách của em.</p>
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <select id="vocab-topic-select" style="flex: 1; border-color: var(--primary); margin-bottom: 0;"></select>
+                            <button class="btn btn-secondary" onclick="shareVocabQR()" title="Chia sẻ Bài tập Từ vựng" style="padding: 0 15px; border-color: var(--primary); color: var(--primary);">
+                                <i class="ph-bold ph-qr-code" style="font-size: 20px;"></i>
+                            </button>
+                        </div>
 
-    <div style="text-align: left; background: rgba(0,0,0,0.05); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border-color);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 13px; font-weight: 600;">🔊 Tự động đọc từ</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="start-set-tts">
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 13px; font-weight: 600;">⏱️ Áp lực thời gian</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="start-set-timer" checked>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
+                        <div style="text-align: left; background: rgba(0,0,0,0.05); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 13px; font-weight: 600;">🔊 Tự động đọc từ</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="start-set-tts">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 13px; font-weight: 600;">⏱️ Áp lực thời gian</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="start-set-timer" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 13px; font-weight: 600;">✨ Hiệu ứng hình ảnh</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="start-set-effects" checked>
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-    </div>
-<div style="text-align: left; background: rgba(0,0,0,0.05); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border-color);">
-        </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; font-weight: 600;">✨ Hiệu ứng hình ảnh</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="start-set-effects" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
 
-    <button class="btn btn-secondary" style="width: 100%; font-size: 16px; padding: 15px; margin-bottom: 12px; border-color: var(--primary); color: var(--primary); background: rgba(15, 77, 95, 0.1);" onclick="openFlashcardMode()">
-        📖 Ôn Tập Nhanh (Flashcards)
-    </button>
-    <button class="btn btn-primary" style="width: 100%; font-size: 16px; padding: 15px; background: linear-gradient(135deg, var(--accent-1), #e11d48); box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);" onclick="initVocabGame()">Bắt Đầu Chiến 🎮</button>
-</div>
+                        <button class="btn btn-secondary" style="width: 100%; font-size: 16px; padding: 15px; margin-bottom: 12px; border-color: var(--primary); color: var(--primary); background: rgba(15, 77, 95, 0.1);" onclick="openFlashcardMode()">
+                            📖 Ôn Tập Nhanh (Flashcards)
+                        </button>
+
+                        <button class="btn btn-primary" style="width: 100%; font-size: 16px; padding: 15px; background: linear-gradient(135deg, var(--accent-1), #e11d48); box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);" onclick="initVocabGame()">Bắt Đầu Chiến 🎮</button>
+                    </div>
 
                     <div class="bento-card bento-stats">
                         <h3>Thành tích Cá nhân 🏆</h3>
@@ -391,7 +403,6 @@
                         <div style="padding: 20px; background: var(--card-bg-elevated); border-radius: var(--radius-lg);">CHUỖI: <strong id="vocab-final-streak" style="font-size: 24px; color: var(--primary);">0</strong></div>
                     </div>
                     <button class="btn btn-primary" onclick="openVocabGame()">Chơi lại</button>
-                </div>
                 </div>
             </div>
 
