@@ -1259,3 +1259,44 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 
 .fc-close { position: absolute; top: 25px; left: 25px; font-size: 32px; color: rgba(255,255,255,0.6); cursor: pointer; transition: 0.2s; padding: 10px; z-index: 10; }
 .fc-close:hover { color: var(--danger); transform: scale(1.1); }
+
+/* ==========================================================================
+   FIX LỖI GIAO DIỆN DROPDOWN & RESPONSIVE ĐIỆN THOẠI
+========================================================================== */
+/* Chữa bệnh tàng hình Dropdown trên Dark Mode */
+select option {
+    background-color: var(--card-bg-elevated) !important;
+    color: var(--text-main) !important;
+    font-size: 15px;
+}
+
+/* Ép form co giãn thông minh không đè lên nhau */
+@media (max-width: 768px) {
+    /* 1. Xử lý thanh tiêu đề Topbar */
+    #app-title {
+        font-size: 18px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 140px; 
+    }
+    
+    /* 2. Ẩn bớt chữ "Người dùng / Giáo viên" để lấy chỗ thở cho Tiêu đề */
+    .topbar-right .user-info { display: none !important; }
+    
+    /* 3. Bo tròn lại nút Avatar cho gọn */
+    .topbar-right .user-profile {
+        padding: 5px !important;
+        border-radius: 50% !important;
+        border: none !important;
+        background: transparent !important;
+    }
+    .topbar-right { gap: 8px !important; }
+
+    /* 4. Thu nhỏ tiêu đề H2 ở bên dưới để không đè vào ô nhập liệu */
+    #screen-vocab-manage h2 {
+        font-size: 22px !important;
+        margin-bottom: 15px !important;
+        word-break: break-word;
+    }
+}
