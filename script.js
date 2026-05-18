@@ -1766,38 +1766,39 @@ function openVocabManage() {
 }
 
 function saveNewVocab() {
-    // 1. Lấy dữ liệu từ các ô nhập liệu (Đã bổ sung lấy Cấp độ)
-    const levelElement = document.getElementById('vocab-level-input');
-    const level = levelElement ? levelElement.value : 'None'; // Mặc định là None nếu không tìm thấy ô cấp độ
+    // --- 1. HỆ THỐNG KIỂM TRA AN NINH ---
+    const topic = document.getElementById('vocab-topic-input').value.trim() || 'Chung';
+    const passInput = document.getElementById('vocab-topic-pass') ? document.getElementById('vocab-topic-pass').value.trim() : '0';
     
-    const type = document.getElementById('vocab-type-input').value; 
-    const topic = document.getElementById('vocab-topic-input').value.trim() || 'Chung'; 
-    const en = document.getElementById('vocab-en-input').value.trim(); 
-    let ipa = document.getElementById('vocab-ipa-input').value.trim(); 
-    let pos = document.getElementById('vocab-pos-input').value.trim(); 
-    const vi = document.getElementById('vocab-vi-input').value.trim(); 
-    let syn = document.getElementById('vocab-syn-input').value.trim(); 
+    if (!db.TopicPasswords) db.TopicPasswords = {};
     
-    // Kiểm tra an toàn cho ô Trái nghĩa (phòng trường hợp bạn đã gộp chung vào ô Đồng nghĩa)
-    const antElement = document.getElementById('vocab-ant-input');
-    let ant = antElement ? antElement.value.trim() : null;
-
-    // 2. Kiểm tra điều kiện bắt buộc
-    if (!en || !vi) { 
-        alert("Vui lòng nhập ít nhất Từ tiếng Anh và Nghĩa tiếng Việt!"); 
-        return; 
+    // Nếu chủ đề đã tồn tại và có pass (khác 0)
+    if (db.TopicPasswords[topic] && db.TopicPasswords[topic] !== '0') {
+        if (passInput !== db.TopicPasswords[topic]) {
+            alert(`❌ Bộ vocab "${topic}" là của người khác. Mật khẩu bạn nhập ở ô "Mật khẩu" không khớp!`);
+            return; // Chặn không cho lưu
+        }
+    } else {
+        // Nếu là chủ đề mới tinh -> Lưu mật khẩu mới tạo vào DB
+        db.TopicPasswords[topic] = passInput || '0';
     }
 
-    // 3. Chuẩn hóa dữ liệu rỗng
-    if (syn === '-' || syn === '') syn = null; 
-    if (ant === '-' || ant === '') ant = null; 
-    if (ipa === '-') ipa = ''; 
-    if (pos === '-') pos = '';
+    // --- 2. XỬ LÝ LƯU TỪ VỰNG NHƯ BÌNH THƯỜNG ---
+    let level = document.getElementById('vocab-level-input').value;
+    let type = document.getElementById('vocab-type-input').value;
+    let en = document.getElementById('vocab-en-input').value.trim();
+    let vi = document.getElementById('vocab-vi-input').value.trim();
+    let ipa = document.getElementById('vocab-ipa-input').value.trim();
+    let pos = document.getElementById('vocab-pos-input').value.trim();
+    let syn = document.getElementById('vocab-syn-input').value.split('|')[0]?.trim() || '';
+    let ant = document.getElementById('vocab-syn-input').value.split('|')[1]?.trim() || '';
 
-    // 4. Đẩy từ vựng mới vào mảng dữ liệu (Có thêm ID và Level)
+    if (!en || !vi) { alert("⚠️ Vui lòng nhập ít nhất Tiếng Anh và Tiếng Việt!"); return; }
+
+    // Đẩy từ vựng lên đầu danh sách
     db.Vocabulary.unshift({ 
-        id: Date.now().toString(), // Tạo ID độc nhất dựa trên thời gian
-        level: level,              // Bổ sung phân cấp A1-C2
+        id: Date.now().toString(),
+        level: level === 'None' ? '' : level,
         type: type, 
         topic: topic, 
         en: en, 
@@ -1811,20 +1812,29 @@ function saveNewVocab() {
         lastPlayed: Date.now()
     });
 
-    // 5. Lưu xuống máy tính
+    // Lưu dữ liệu vào máy (Lưu luôn cả TopicPasswords)
     localStorage.setItem('myStudyData', JSON.stringify(db));
-    
-    // 6. Xóa trắng các ô (ngoại trừ Chủ đề, Phân loại, Cấp độ để nhập tiếp cho lẹ)
-    document.getElementById('vocab-en-input').value = ""; 
+
+    // Reset các ô nhập liệu (Giữ lại chủ đề và pass để nhập tiếp cho lẹ)
+    document.getElementById('vocab-en-input').value = "";
     document.getElementById('vocab-vi-input').value = "";
-    document.getElementById('vocab-ipa-input').value = ""; 
+    document.getElementById('vocab-ipa-input').value = "";
     document.getElementById('vocab-pos-input').value = "";
-    document.getElementById('vocab-syn-input').value = ""; 
-    if (antElement) antElement.value = "";
+    document.getElementById('vocab-syn-input').value = "";
+
+    // Cập nhật giao diện
+    if (typeof renderVocabList === 'function') renderVocabList();
+    if (typeof updateVocabBentoStats === 'function') updateVocabBentoStats();
     
-    // 7. Chuyển con trỏ chuột về ô Tiếng Anh và cập nhật danh sách
-    document.getElementById('vocab-en-input').focus(); 
-    renderVocabList();
+    // Thông báo nhẹ nhàng
+    const btn = document.querySelector('button[onclick="saveNewVocab()"]');
+    const oldText = btn.innerHTML;
+    btn.innerHTML = "✅ Đã thêm vào kho!";
+    btn.style.background = "var(--success)";
+    setTimeout(() => {
+        btn.innerHTML = oldText;
+        btn.style.background = "";
+    }, 1500);
 }
 
 let draggedVocabIndex = -1;
@@ -4561,7 +4571,7 @@ function getSmartRandomWord(pool) {
 }
 
 /* ==========================================================================
-   CHẾ ĐỘ FLASHCARD (ÔN TẬP NHANH) - BẢN FIX BUG CHUỖI VÀ LẬT THẺ
+   CHẾ ĐỘ FLASHCARD (ÔN TẬP NHANH) - BẢN TÍCH HỢP BẢO MẬT KHÓA CHỦ ĐỀ
 ========================================================================== */
 let fcWords = [];
 let fcCurrentIndex = 0;
@@ -4569,16 +4579,55 @@ let fcTouchStartX = 0;
 
 function openFlashcardMode() {
     const selectedTopic = document.getElementById('vocab-topic-select').value;
-    fcWords = selectedTopic === 'ALL' ? [...db.Vocabulary] : db.Vocabulary.filter(v => (v.topic || 'Chung') === selectedTopic);
     
-    if (fcWords.length === 0) { alert("⚠️ Chủ đề này chưa có từ vựng!"); return; }
+    // Khởi tạo nếu bộ nhớ lưu pass chưa có
+    if (!db.TopicPasswords) db.TopicPasswords = {};
     
-    vSettings.autoTTS = document.getElementById('start-set-tts').checked;
-    fcWords.sort(() => Math.random() - 0.5); 
+    // --- Ổ KHÓA KIỂM TRA AN NHIÊN ---
+    if (typeof isTopicUnlocked === 'function') {
+        if (!isTopicUnlocked(selectedTopic)) {
+            document.getElementById('vocab-topic-select').value = 'ALL'; // Trả dropdown về ALL
+            return; 
+        }
+    } else {
+        // Hàm fallback phòng trường hợp chưa định nghĩa hàm kiểm tra rời
+        if (selectedTopic !== 'ALL' && db.TopicPasswords[selectedTopic] && db.TopicPasswords[selectedTopic] !== '0') {
+            const entered = prompt(`🔒 Bộ Vocab "${selectedTopic}" đã được bảo mật.\nVui lòng nhập mật khẩu để truy cập:`);
+            if (entered !== db.TopicPasswords[selectedTopic]) {
+                alert("❌ Sai mật khẩu! Bạn không có quyền truy cập bộ Vocab này.");
+                document.getElementById('vocab-topic-select').value = 'ALL';
+                return;
+            }
+        }
+    }
+    
+    // --- BỘ LỌC TỪ VỰNG THÔNG MINH ---
+    // Nếu chọn ALL: Chỉ hiện các từ thuộc chủ đề công khai (pass bằng 0 hoặc không cài pass)
+    // Nếu chọn chủ đề cụ thể: Lấy toàn bộ từ của chủ đề đó (đã vượt qua vòng check pass ở trên)
+    if (selectedTopic === 'ALL') {
+        fcWords = db.Vocabulary.filter(v => {
+            const t = v.topic || 'Chung';
+            return !db.TopicPasswords[t] || db.TopicPasswords[t] === '0';
+        });
+    } else {
+        fcWords = db.Vocabulary.filter(v => (v.topic || 'Chung') === selectedTopic);
+    }
+    
+    if (fcWords.length === 0) {
+        alert("⚠️ Chủ đề này hiện tại chưa có từ vựng công khai nào!");
+        return;
+    }
+    
+    // Đọc trạng thái cấu hình âm thanh TTS của người dùng từ giao diện
+    const ttsCheckbox = document.getElementById('start-set-tts');
+    vSettings.autoTTS = ttsCheckbox ? ttsCheckbox.checked : false;
+    
+    // Xáo trộn ngẫu nhiên danh sách thẻ để tăng hiệu quả phản xạ học tập
+    fcWords.sort(() => Math.random() - 0.5);
     fcCurrentIndex = 0;
     
     renderFlashcardUI();
-    document.addEventListener('keydown', handleFlashcardKeys); 
+    document.addEventListener('keydown', handleFlashcardKeys); // Bật trình lắng nghe phím tắt bàn phím
 }
 
 function renderFlashcardUI() {
@@ -4596,6 +4645,7 @@ function renderFlashcardUI() {
 function updateFlashcardContent() {
     const overlay = document.getElementById('flashcard-overlay');
     const word = fcWords[fcCurrentIndex];
+    if (!word) return;
     
     let synHtml = word.syn ? `<p style="font-size:15px; margin-top:20px; color:#a7f3d0; font-weight: 500;"><strong>Đồng nghĩa:</strong> ${word.syn}</p>` : '';
     let antHtml = word.ant ? `<p style="font-size:15px; margin-top:5px; color:#fecdd3; font-weight: 500;"><strong>Trái nghĩa:</strong> ${word.ant}</p>` : '';
@@ -4615,7 +4665,7 @@ function updateFlashcardContent() {
                     <button class="fc-speaker" onclick="playFlashcardTTS(event)">
                         <i class="ph-fill ph-speaker-high"></i>
                     </button>
-                    <h2 style="font-size: 42px; margin: 0; color: var(--primary); font-weight: 900;">${word.en}</h2>
+                    <h2 style="font-size: 42px; margin: 0; color: var(--primary); font-weight: 900; word-break: break-word;">${word.en}</h2>
                     ${posHtml}
                     <div style="position: absolute; bottom: 25px; font-size: 14px; color: var(--text-muted); font-weight: bold;"><i class="ph-bold ph-hand-tap" style="font-size: 20px; vertical-align: middle;"></i> Chạm để lật</div>
                 </div>
@@ -4624,7 +4674,7 @@ function updateFlashcardContent() {
                     <button class="fc-speaker" onclick="playFlashcardTTS(event)">
                         <i class="ph-fill ph-speaker-high"></i>
                     </button>
-                    <h2 style="font-size: 32px; margin: 0; color: #fff; font-weight: 800;">${word.vi}</h2>
+                    <h2 style="font-size: 32px; margin: 0; color: #fff; font-weight: 800; word-break: break-word;">${word.vi}</h2>
                     ${ipaHtml}
                     ${synHtml}
                     ${antHtml}
@@ -4639,25 +4689,30 @@ function updateFlashcardContent() {
         <div style="color:rgba(255,255,255,0.4); font-size:13px; margin-top:20px; font-style: italic;">Phím Space: Lật thẻ | Phím Trái/Phải: Chuyển thẻ</div>
     `;
     
+    // Cấu trúc nhận diện cử chỉ vuốt trên màn hình cảm ứng điện thoại
     const fcContainer = document.getElementById('fc-container');
-    fcContainer.addEventListener('touchstart', e => { fcTouchStartX = e.changedTouches[0].screenX; }, { passive: true });
-    fcContainer.addEventListener('touchend', e => {
-        let touchEndX = e.changedTouches[0].screenX;
-        if (fcTouchStartX - touchEndX > 50) nextFlashcard(); 
-        if (touchEndX - fcTouchStartX > 50) prevFlashcard(); 
-    }, { passive: true });
+    if (fcContainer) {
+        fcContainer.addEventListener('touchstart', e => { fcTouchStartX = e.changedTouches[0].screenX; }, { passive: true });
+        fcContainer.addEventListener('touchend', e => {
+            let touchEndX = e.changedTouches[0].screenX;
+            if (fcTouchStartX - touchEndX > 50) nextFlashcard(); 
+            if (touchEndX - fcTouchStartX > 50) prevFlashcard(); 
+        }, { passive: true });
+    }
 
+    // Tự động phát âm bằng công nghệ Text-to-Speech nếu tùy chọn đang bật
     if (vSettings.autoTTS) playFlashcardTTS(null);
 }
 
 function playFlashcardTTS(event) {
-    if (event) event.stopPropagation(); 
+    if (event) event.stopPropagation(); // Ngăn chặn sự kiện nổi bọt gây lật thẻ ngoài ý muốn
     const word = fcWords[fcCurrentIndex];
     if (!word) return;
     try {
         window.speechSynthesis.cancel(); 
         const msg = new SpeechSynthesisUtterance(word.en);
-        msg.lang = 'en-US'; msg.rate = 0.85;
+        msg.lang = 'en-US'; 
+        msg.rate = 0.85;
         window.speechSynthesis.speak(msg);
     } catch(e) {}
 }
@@ -4669,24 +4724,26 @@ function flipFlashcard() {
 
 function nextFlashcard() {
     if (fcCurrentIndex < fcWords.length - 1) {
-        fcCurrentIndex++; updateFlashcardContent();
+        fcCurrentIndex++; 
+        updateFlashcardContent();
     } else {
-        alert("🎉 Chúc mừng! Em đã ôn tập xong. Bấm 'Bắt Đầu Chiến' để kiểm tra lại nhé!");
+        alert("🎉 Tuyệt vời! Em đã hoàn thành việc ôn tập tất cả các thẻ từ vựng trong danh mục này.");
         closeFlashcardMode();
     }
 }
 
 function prevFlashcard() {
     if (fcCurrentIndex > 0) {
-        fcCurrentIndex--; updateFlashcardContent();
+        fcCurrentIndex--; 
+        updateFlashcardContent();
     }
 }
 
 function closeFlashcardMode() {
     const overlay = document.getElementById('flashcard-overlay');
     if (overlay) overlay.classList.add('hidden');
-    document.removeEventListener('keydown', handleFlashcardKeys); 
-    window.speechSynthesis.cancel(); 
+    document.removeEventListener('keydown', handleFlashcardKeys); // Hủy lắng nghe phím tắt để tránh xung đột
+    window.speechSynthesis.cancel(); // Ngắt ngay lập tức giọng đọc đang phát
 }
 
 function handleFlashcardKeys(e) {
@@ -4696,7 +4753,7 @@ function handleFlashcardKeys(e) {
     if (e.key === 'ArrowRight') nextFlashcard();
     if (e.key === 'ArrowLeft') prevFlashcard();
     if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault(); 
+        e.preventDefault(); // Chặn hành vi cuộn trang mặc định của phím Space
         flipFlashcard();
     }
 }
@@ -4730,14 +4787,35 @@ function filterVocabTable() {
     if (!filterSelect) return;
     
     const targetTopic = filterSelect.value;
+    
+    // --- 1. KIỂM TRA Ổ KHÓA KHI CHỌN CHỦ ĐỀ CỤ THỂ ---
+    if (targetTopic !== 'ALL' && typeof isTopicUnlocked === 'function') {
+        if (!isTopicUnlocked(targetTopic)) {
+            // Nếu người dùng nhập sai mật khẩu, ép Dropdown quay về "Tất cả chủ đề" và lọc lại
+            filterSelect.value = 'ALL'; 
+            filterVocabTable(); 
+            return;
+        }
+    }
+
+    // --- 2. THỰC HIỆN LỌC VÀ ẨN/HIỆN GIAO DIỆN ---
     const rows = document.querySelectorAll('#vocab-manage-list .vocab-item-row');
     
+    // Đảm bảo db.TopicPasswords tồn tại để không bị lỗi undefined
+    if (!db.TopicPasswords) db.TopicPasswords = {};
+
     rows.forEach(row => {
         const rowTopic = row.getAttribute('data-topic') || 'Chung';
-        if (targetTopic === 'ALL' || rowTopic === targetTopic) {
-            row.style.display = ''; 
+        
+        if (targetTopic === 'ALL') {
+            // Chế độ "Tất cả chủ đề": Kiểm tra xem chủ đề của từ này có bị khóa pass không?
+            let isLocked = db.TopicPasswords[rowTopic] && db.TopicPasswords[rowTopic] !== '0';
+            
+            // Nếu bị khóa thì TÀNG HÌNH luôn, nếu không khóa thì hiện bình thường
+            row.style.display = isLocked ? 'none' : '';
         } else {
-            row.style.display = 'none'; 
+            // Chế độ "Chọn 1 chủ đề cụ thể": Chỉ hiện đúng các từ của chủ đề đang chọn
+            row.style.display = (rowTopic === targetTopic) ? '' : 'none'; 
         }
     });
 }
@@ -4764,4 +4842,30 @@ function deleteTopicBulk() {
 
     alert(`🎉 Đã xóa sạch chủ đề "${selectedTopic}" (${countToDelete} từ vựng)!`);
     renderVocabList(); 
+}
+
+/* ==========================================================================
+   HỆ THỐNG BẢO MẬT BỘ VOCAB THEO NGƯỜI DÙNG (CÀI PASS)
+========================================================================== */
+
+// Khởi tạo kho lưu mật khẩu nếu chưa có
+if (!db.TopicPasswords) db.TopicPasswords = {};
+
+// Hàm kiểm tra an ninh (Trả về true nếu được phép vào, false nếu sai pass)
+function isTopicUnlocked(topicName) {
+    if (!db.TopicPasswords) db.TopicPasswords = {};
+    if (topicName === 'ALL') return true; 
+    
+    const pass = db.TopicPasswords[topicName];
+    // Nếu không có pass hoặc pass là 0 -> Công khai
+    if (!pass || pass === '0') return true; 
+
+    // Nếu có pass -> Yêu cầu nhập
+    const entered = prompt(`🔒 Bộ Vocab "${topicName}" đã được bảo mật.\nVui lòng nhập mật khẩu để truy cập:`);
+    if (entered === pass) {
+        return true;
+    } else {
+        alert("❌ Sai mật khẩu! Bạn không có quyền truy cập bộ Vocab này.");
+        return false;
+    }
 }
