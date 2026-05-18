@@ -1906,78 +1906,101 @@ function deleteSelectedVocabs() {
 function deleteAllVocabs() { if(confirm("⚠️ NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ kho từ vựng không? Hành động này không thể hoàn tác!")) { db.Vocabulary = []; localStorage.setItem('myStudyData', JSON.stringify(db)); renderVocabList(); } }
 
 function saveBulkVocab() {
-    const bulkData = document.getElementById('vocab-bulk-input').value.trim();
-    if (!bulkData) { alert("⚠️ Vui lòng dán dữ liệu vào ô trước khi xử lý!"); return; }
+    const inputData = document.getElementById('vocab-bulk-input').value.trim();
+    if (!inputData) {
+        alert("⚠️ Vui lòng dán dữ liệu vào ô trống!");
+        return;
+    }
 
-    const lines = bulkData.split('\n');
+    const lines = inputData.split('\n');
     let successCount = 0;
+    
+    // Đảm bảo kho lưu pass tồn tại
+    if (!db.TopicPasswords) db.TopicPasswords = {};
+    
+    // Lấy mật khẩu mặc định từ ô nhập Mật khẩu bên trên (để gán cho các chủ đề mới tinh)
+    const defaultPassInput = document.getElementById('vocab-topic-pass');
+    const defaultPass = defaultPassInput ? defaultPassInput.value.trim() : '0';
 
-    lines.forEach((line, index) => {
-        // Dữ liệu copy từ Excel/Google Sheet sẽ cách nhau bằng ký tự Tab (\t)
-        const cols = line.split('\t').map(c => c.trim()); 
+    // --- BƯỚC 1: QUÉT TRƯỚC ĐỂ TÌM DANH SÁCH CHỦ ĐỀ SẼ IMPORT ---
+    let uniqueTopics = new Set();
+    let parsedWords = [];
+
+    for (let line of lines) {
+        if (!line.trim()) continue;
+        let cols = line.split('\t').map(c => c.trim());
         
-        if (cols.length >= 2) { // Điều kiện tối thiểu: Phải có Anh - Việt
-            let level = 'None', type = 'word', topic = 'Chung', en = '', vi = '', ipa = '', pos = '', syn = null, ant = null;
-
-            // Kịch bản 1: Chỉ dán 2 cột (Tiếng Anh | Tiếng Việt)
-            if (cols.length === 2) {
-                en = cols[0]; vi = cols[1];
-            } 
-            // Kịch bản 2: Dán 3 cột (Chủ đề | Tiếng Anh | Tiếng Việt)
-            else if (cols.length === 3) {
-                topic = cols[0]; en = cols[1]; vi = cols[2];
-            } 
-            // Kịch bản 3: Full Option (8 cột) -> Cấp độ | Loại | Chủ đề | Tiếng Anh | Tiếng Việt | Phiên âm | Từ loại | Đồng nghĩa
-            else if (cols.length >= 5) { 
-                level = cols[0] || 'None';
-                type = cols[1] || 'word'; // Các loại: word, phrase, collo
-                topic = cols[2] || 'Chung';
-                en = cols[3];
-                vi = cols[4];
-                ipa = cols[5] || '';
-                pos = cols[6] || '';
-                
-                // Tách đồng nghĩa và trái nghĩa nếu có dấu gạch đứng "|"
-                let synText = cols[7] || '';
-                if (synText.includes('|')) {
-                    let parts = synText.split('|');
-                    syn = parts[0].trim();
-                    ant = parts[1].trim();
-                } else {
-                    syn = synText || null;
-                }
-            }
-
-            // Chỉ lưu khi Tiếng Anh và Tiếng Việt không bị rỗng
-            if (en !== '' && vi !== '') {
-                db.Vocabulary.unshift({
-                    id: Date.now().toString() + index, // Chống trùng lặp ID khi vòng lặp chạy quá nhanh
-                    level: level,
-                    type: type,
-                    topic: topic,
-                    en: en,
-                    vi: vi,
-                    ipa: ipa,
-                    pos: pos ? (pos.includes('(') ? pos : `(${pos})`) : '', // Tự bọc dấu ngoặc cho Từ loại
-                    syn: syn === '-' || syn === '' ? null : syn,
-                    ant: ant === '-' || ant === '' ? null : ant,
-                    correctCount: 0, 
-                    wrongCount: 0,
-                    lastPlayed: Date.now()
-                });
-                successCount++;
-            }
+        // Chỉ xử lý nếu dòng có ít nhất 5 cột (đảm bảo đủ Anh - Việt và Chủ đề)
+        if (cols.length >= 5) { 
+            let topic = cols[2] || 'Chung';
+            uniqueTopics.add(topic);
+            parsedWords.push(cols);
         }
+    }
+
+    if (parsedWords.length === 0) {
+        alert("❌ Dữ liệu không hợp lệ. Vui lòng đảm bảo copy đúng bảng từ AI (ngăn cách bằng phím Tab).");
+        return;
+    }
+
+    // --- BƯỚC 2: KIỂM TRA AN NINH TỪNG CHỦ ĐỀ ---
+    for (let topic of uniqueTopics) {
+        // Nếu chủ đề đã có pass và pass khác 0
+        if (db.TopicPasswords[topic] && db.TopicPasswords[topic] !== '0') {
+            let entered = prompt(`🔒 BẢO MẬT: Nhập mật khẩu cho chủ đề "${topic}" để thêm từ hàng loạt:`);
+            if (entered !== db.TopicPasswords[topic]) {
+                alert(`❌ Sai mật khẩu chủ đề "${topic}". Đã hủy toàn bộ quá trình nhập!`);
+                return; // Chặn đứng, không cho import bất kỳ từ nào
+            }
+        } else if (!db.TopicPasswords[topic]) {
+            // Nếu là chủ đề mới -> tự động gán pass bằng với ô Mật khẩu bạn đang nhập trên màn hình
+            db.TopicPasswords[topic] = defaultPass || '0'; 
+        }
+    }
+
+    // --- BƯỚC 3: XỬ LÝ LƯU DỮ LIỆU ---
+    parsedWords.forEach(cols => {
+        let level = cols[0] === '-' ? '' : cols[0];
+        let type = (cols[1] === 'word' || cols[1] === 'phrase' || cols[1] === 'collo' || cols[1] === 'structure') ? cols[1] : 'word';
+        let topic = cols[2];
+        let en = cols[3];
+        let vi = cols[4];
+        let ipa = cols[5] === '-' ? '' : cols[5];
+        let pos = cols[6] === '-' ? '' : cols[6];
+        
+        let synAnt = cols[7] || '';
+        let syn = synAnt.split('|')[0]?.trim() || '';
+        let ant = synAnt.split('|')[1]?.trim() || '';
+        if(syn === '-') syn = '';
+        if(ant === '-') ant = '';
+
+        db.Vocabulary.unshift({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Tạo ID duy nhất tránh trùng lặp
+            level: level,
+            type: type,
+            topic: topic,
+            en: en,
+            ipa: ipa,
+            pos: pos ? `(${pos})` : '',
+            vi: vi,
+            syn: syn,
+            ant: ant,
+            correctCount: 0,
+            wrongCount: 0,
+            lastPlayed: Date.now()
+        });
+        successCount++;
     });
 
-    if (successCount > 0) {
-        localStorage.setItem('myStudyData', JSON.stringify(db));
-        document.getElementById('vocab-bulk-input').value = ""; // Xóa trắng ô nhập liệu
-        renderVocabList(); // Làm mới danh sách hiển thị
-        alert(`✅ Đã nhập thành công ${successCount} từ vựng!`);
-    } else {
-        alert("⚠️ Không tìm thấy dữ liệu hợp lệ. Vui lòng copy từ Excel (Các cột phải ngăn cách bằng phím Tab).");
-    }
+    // Lưu vào bộ nhớ cục bộ
+    localStorage.setItem('myStudyData', JSON.stringify(db));
+    
+    // Xóa trắng ô nhập liệu
+    document.getElementById('vocab-bulk-input').value = '';
+    alert(`🎉 Đã thêm thành công ${successCount} từ vựng!`);
+    
+    // Cập nhật lại giao diện
+    if (typeof renderVocabList === 'function') renderVocabList();
 }
 
 let playingVocabPool = []; let vScore = 0, vStreak = 0, vMaxStreak = 0, vLives = 3; let vCurrentQuestion = null; let currentVocabTopic = "";
