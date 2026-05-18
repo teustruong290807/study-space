@@ -1184,7 +1184,7 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 }
 
 /* ==========================================================================
-   CHẾ ĐỘ FLASHCARD 3D & SWIPE (BẢN SỬA LỖI ĐƠ THẺ)
+   CHẾ ĐỘ FLASHCARD 3D & SWIPE (BẢN FIX LỖI LỆCH THẺ)
 ========================================================================== */
 .flashcard-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -1195,12 +1195,15 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 }
 
 .flashcard-container {
-    width: 100%; max-width: 340px; height: 60vh; min-height: 400px; max-height: 480px; 
-    perspective: 1200px; position: relative; margin: 30px 0;
+    width: 340px; /* Cố định width thay vì 100% để thẻ không bị bóp méo */
+    max-width: 90vw; 
+    height: 60vh; min-height: 400px; max-height: 480px; 
+    perspective: 1200px; position: relative; 
+    margin: 0 auto; /* Đảm bảo căn giữa tuyệt đối */
 }
 
 .flashcard-inner {
-    width: 100%; height: 100%; position: relative;
+    width: 100%; height: 100%; position: absolute; left: 0; top: 0; /* Ghim chặt vào container */
     transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;
@@ -1210,11 +1213,12 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .flashcard-inner.is-flipped { transform: rotateY(180deg); }
 
 .flashcard-face {
-    position: absolute; width: 100%; height: 100%;
+    position: absolute; width: 100%; height: 100%; left: 0; top: 0; /* Ghim chặt mặt thẻ */
     -webkit-backface-visibility: hidden; backface-visibility: hidden;
     border-radius: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 30px; text-align: center; border: 2px solid var(--border-color);
+    box-sizing: border-box; /* QUAN TRỌNG NHẤT: Ngăn padding đẩy bung thẻ */
 }
 
 .flashcard-front { 
@@ -1251,7 +1255,7 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 }
 .fc-nav-btn:hover:not(:disabled) { background: var(--primary); transform: scale(1.1); }
 .fc-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.fc-controls { display: flex; gap: 40px; align-items: center; }
+.fc-controls { display: flex; gap: 40px; align-items: center; margin-top: 25px; }
 
-.fc-close { position: absolute; top: 25px; left: 25px; font-size: 32px; color: rgba(255,255,255,0.6); cursor: pointer; transition: 0.2s; padding: 10px; }
+.fc-close { position: absolute; top: 25px; left: 25px; font-size: 32px; color: rgba(255,255,255,0.6); cursor: pointer; transition: 0.2s; padding: 10px; z-index: 10; }
 .fc-close:hover { color: var(--danger); transform: scale(1.1); }
