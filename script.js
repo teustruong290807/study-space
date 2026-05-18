@@ -4533,4 +4533,143 @@ function getSmartRandomWord(pool) {
     return pool[Math.floor(Math.random() * pool.length)]; 
 }
 
+/* ==========================================================================
+   CHẾ ĐỘ FLASHCARD (ÔN TẬP NHANH) - BẢN FIX BUG CHUỖI VÀ LẬT THẺ
+========================================================================== */
+let fcWords = [];
+let fcCurrentIndex = 0;
+let fcTouchStartX = 0;
 
+function openFlashcardMode() {
+    const selectedTopic = document.getElementById('vocab-topic-select').value;
+    fcWords = selectedTopic === 'ALL' ? [...db.Vocabulary] : db.Vocabulary.filter(v => (v.topic || 'Chung') === selectedTopic);
+    
+    if (fcWords.length === 0) { alert("⚠️ Chủ đề này chưa có từ vựng!"); return; }
+    
+    vSettings.autoTTS = document.getElementById('start-set-tts').checked;
+    fcWords.sort(() => Math.random() - 0.5); 
+    fcCurrentIndex = 0;
+    
+    renderFlashcardUI();
+    document.addEventListener('keydown', handleFlashcardKeys); 
+}
+
+function renderFlashcardUI() {
+    let overlay = document.getElementById('flashcard-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'flashcard-overlay';
+        overlay.className = 'flashcard-overlay';
+        document.body.appendChild(overlay);
+    }
+    overlay.classList.remove('hidden');
+    updateFlashcardContent();
+}
+
+function updateFlashcardContent() {
+    const overlay = document.getElementById('flashcard-overlay');
+    const word = fcWords[fcCurrentIndex];
+    
+    let synHtml = word.syn ? `<p style="font-size:15px; margin-top:20px; color:#a7f3d0; font-weight: 500;"><strong>Đồng nghĩa:</strong> ${word.syn}</p>` : '';
+    let antHtml = word.ant ? `<p style="font-size:15px; margin-top:5px; color:#fecdd3; font-weight: 500;"><strong>Trái nghĩa:</strong> ${word.ant}</p>` : '';
+    let ipaHtml = word.ipa ? `<span style="font-size:18px; font-family:monospace; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 8px; margin-top:15px; display:inline-block;">${word.ipa}</span>` : '';
+    let posHtml = word.pos ? `<span style="font-size:15px; color: var(--text-muted); font-weight:bold; text-transform: uppercase; margin-top:5px; display:block;">${word.pos}</span>` : '';
+
+    overlay.innerHTML = `
+        <div class="fc-close" onclick="closeFlashcardMode()"><i class="ph-bold ph-x"></i></div>
+        <div style="color:rgba(255,255,255,0.7); font-size:16px; font-weight:bold; letter-spacing: 1px;">
+            THẺ ${fcCurrentIndex + 1} / ${fcWords.length}
+        </div>
+        
+        <div class="flashcard-container" id="fc-container">
+            <div class="flashcard-inner" id="fc-inner" onclick="flipFlashcard()">
+                
+                <div class="flashcard-face flashcard-front">
+                    <button class="fc-speaker" onclick="playFlashcardTTS(event)">
+                        <i class="ph-fill ph-speaker-high"></i>
+                    </button>
+                    <h2 style="font-size: 42px; margin: 0; color: var(--primary); font-weight: 900;">${word.en}</h2>
+                    ${posHtml}
+                    <div style="position: absolute; bottom: 25px; font-size: 14px; color: var(--text-muted); font-weight: bold;"><i class="ph-bold ph-hand-tap" style="font-size: 20px; vertical-align: middle;"></i> Chạm để lật</div>
+                </div>
+                
+                <div class="flashcard-face flashcard-back">
+                    <button class="fc-speaker" onclick="playFlashcardTTS(event)">
+                        <i class="ph-fill ph-speaker-high"></i>
+                    </button>
+                    <h2 style="font-size: 32px; margin: 0; color: #fff; font-weight: 800;">${word.vi}</h2>
+                    ${ipaHtml}
+                    ${synHtml}
+                    ${antHtml}
+                </div>
+            </div>
+        </div>
+        
+        <div class="fc-controls">
+            <button class="fc-nav-btn" onclick="prevFlashcard()" ${fcCurrentIndex === 0 ? 'disabled' : ''}><i class="ph-bold ph-caret-left"></i></button>
+            <button class="fc-nav-btn" onclick="nextFlashcard()"><i class="ph-bold ph-caret-right"></i></button>
+        </div>
+        <div style="color:rgba(255,255,255,0.4); font-size:13px; margin-top:20px; font-style: italic;">Phím Space: Lật thẻ | Phím Trái/Phải: Chuyển thẻ</div>
+    `;
+    
+    const fcContainer = document.getElementById('fc-container');
+    fcContainer.addEventListener('touchstart', e => { fcTouchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    fcContainer.addEventListener('touchend', e => {
+        let touchEndX = e.changedTouches[0].screenX;
+        if (fcTouchStartX - touchEndX > 50) nextFlashcard(); 
+        if (touchEndX - fcTouchStartX > 50) prevFlashcard(); 
+    }, { passive: true });
+
+    if (vSettings.autoTTS) playFlashcardTTS(null);
+}
+
+function playFlashcardTTS(event) {
+    if (event) event.stopPropagation(); 
+    const word = fcWords[fcCurrentIndex];
+    if (!word) return;
+    try {
+        window.speechSynthesis.cancel(); 
+        const msg = new SpeechSynthesisUtterance(word.en);
+        msg.lang = 'en-US'; msg.rate = 0.85;
+        window.speechSynthesis.speak(msg);
+    } catch(e) {}
+}
+
+function flipFlashcard() {
+    const cardInner = document.getElementById('fc-inner');
+    if (cardInner) cardInner.classList.toggle('is-flipped');
+}
+
+function nextFlashcard() {
+    if (fcCurrentIndex < fcWords.length - 1) {
+        fcCurrentIndex++; updateFlashcardContent();
+    } else {
+        alert("🎉 Chúc mừng! Em đã ôn tập xong. Bấm 'Bắt Đầu Chiến' để kiểm tra lại nhé!");
+        closeFlashcardMode();
+    }
+}
+
+function prevFlashcard() {
+    if (fcCurrentIndex > 0) {
+        fcCurrentIndex--; updateFlashcardContent();
+    }
+}
+
+function closeFlashcardMode() {
+    const overlay = document.getElementById('flashcard-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    document.removeEventListener('keydown', handleFlashcardKeys); 
+    window.speechSynthesis.cancel(); 
+}
+
+function handleFlashcardKeys(e) {
+    const overlay = document.getElementById('flashcard-overlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    
+    if (e.key === 'ArrowRight') nextFlashcard();
+    if (e.key === 'ArrowLeft') prevFlashcard();
+    if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault(); 
+        flipFlashcard();
+    }
+}
