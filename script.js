@@ -4675,6 +4675,12 @@ function updateFlashcardContent() {
     let ipaHtml = word.ipa ? `<span style="font-size:18px; font-family:monospace; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 8px; margin-top:15px; display:inline-block;">${word.ipa}</span>` : '';
     let posHtml = word.pos ? `<span style="font-size:15px; color: var(--text-muted); font-weight:bold; text-transform: uppercase; margin-top:5px; display:block;">${word.pos}</span>` : '';
 
+    // --- LOGIC THU NHỎ FONT THÔNG MINH ---
+    // Nếu chữ tiếng Anh dài hơn 12 ký tự -> size 32px, dài hơn 25 ký tự -> size 24px
+    let enFontSize = word.en.length > 12 ? (word.en.length > 25 ? '24px' : '32px') : '42px';
+    // Nghĩa tiếng Việt dài hơn 15 ký tự -> size 26px, dài hơn 30 ký tự -> size 20px
+    let viFontSize = word.vi.length > 15 ? (word.vi.length > 30 ? '20px' : '26px') : '32px';
+
     overlay.innerHTML = `
         <div class="fc-close" onclick="closeFlashcardMode()"><i class="ph-bold ph-x"></i></div>
         <div style="color:rgba(255,255,255,0.7); font-size:16px; font-weight:bold; letter-spacing: 1px;">
@@ -4688,7 +4694,7 @@ function updateFlashcardContent() {
                     <button class="fc-speaker" onclick="playFlashcardTTS(event)">
                         <i class="ph-fill ph-speaker-high"></i>
                     </button>
-                    <h2 style="font-size: 42px; margin: 0; color: var(--primary); font-weight: 900; word-break: break-word;">${word.en}</h2>
+                    <h2 style="font-size: ${enFontSize}; margin: 0; color: var(--primary); font-weight: 900; line-height: 1.3; overflow-wrap: break-word; padding: 0 10px;">${word.en}</h2>
                     ${posHtml}
                     <div style="position: absolute; bottom: 25px; font-size: 14px; color: var(--text-muted); font-weight: bold;"><i class="ph-bold ph-hand-tap" style="font-size: 20px; vertical-align: middle;"></i> Chạm để lật</div>
                 </div>
@@ -4697,7 +4703,7 @@ function updateFlashcardContent() {
                     <button class="fc-speaker" onclick="playFlashcardTTS(event)">
                         <i class="ph-fill ph-speaker-high"></i>
                     </button>
-                    <h2 style="font-size: 32px; margin: 0; color: #fff; font-weight: 800; word-break: break-word;">${word.vi}</h2>
+                    <h2 style="font-size: ${viFontSize}; margin: 0; color: #fff; font-weight: 800; line-height: 1.3; overflow-wrap: break-word; padding: 0 10px;">${word.vi}</h2>
                     ${ipaHtml}
                     ${synHtml}
                     ${antHtml}
