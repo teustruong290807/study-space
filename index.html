@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
+<h2>🛠 Quản lý Kho Từ Vựng</h2>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ôn tập</title>
@@ -233,7 +231,10 @@
 
             <div id="screen-vocab-manage" class="screen hidden">
                 <h2 style="margin-top: 0;">🛠 Quản lý Kho Từ Vựng</h2>
-                <input type="text" id="vocab-topic-input" placeholder="Tên Chủ đề (VD: Tuần 1)...">
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+    <input type="text" id="vocab-topic-input" placeholder="Tên bộ Vocab (VD: Của Nam)..." style="flex: 2; margin-bottom: 0;">
+    <input type="text" id="vocab-topic-pass" placeholder="Mật khẩu (Nhập 0 để công khai)" style="flex: 1; margin-bottom: 0;" title="Nhập 0 nếu không muốn khóa">
+</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <select id="vocab-level-input" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-main);">
                         <option value="None">-- Chọn Cấp độ --</option>
