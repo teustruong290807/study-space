@@ -1845,20 +1845,47 @@ function toggleVocabBulkDelete() {
 }
 
 function renderVocabList() {
-    const listDiv = document.getElementById('vocab-manage-list'); listDiv.innerHTML = ""; document.getElementById('vocab-total-count').innerText = db.Vocabulary.length;
-    if (db.Vocabulary.length === 0) { listDiv.innerHTML = "<p style='text-align:center; color: var(--text-muted);'>Kho từ vựng đang trống. Hãy thêm từ mới nhé!</p>"; return; }
+    const listDiv = document.getElementById('vocab-manage-list'); 
+    listDiv.innerHTML = ""; 
+    document.getElementById('vocab-total-count').innerText = db.Vocabulary.length;
+    
+    if (db.Vocabulary.length === 0) { 
+        listDiv.innerHTML = "<p style='text-align:center; color: var(--text-muted);'>Kho từ vựng đang trống. Hãy thêm từ mới nhé!</p>"; 
+        return; 
+    } 
+    
     db.Vocabulary.forEach((item, index) => {
-        const div = document.createElement('div'); div.className = 'vocab-item-row drag-item'; div.draggable = !isVocabBulkDeleteMode;
-        div.ondragstart = (e) => handleVocabDragStart(e, index); div.ondragover = (e) => handleVocabDragOver(e); div.ondrop = (e) => handleVocabDrop(e, index); div.ondragend = (e) => handleVocabDragEnd(e);
-        div.style.cssText = "background: var(--card-bg); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);";
+        const div = document.createElement('div'); 
+        div.className = 'vocab-item-row drag-item'; 
+        div.draggable = !isVocabBulkDeleteMode;
+        
+        // Gắn thuộc tính data-topic để hàm lọc có thể tìm và ẩn/hiện đúng chủ đề
+        div.setAttribute('data-topic', item.topic || 'Chung'); 
+
+        div.ondragstart = (e) => handleVocabDragStart(e, index); 
+        div.ondragover = (e) => handleVocabDragOver(e); 
+        div.ondrop = (e) => handleVocabDrop(e, index); 
+        div.ondragend = (e) => handleVocabDragEnd(e);
+        
+        // Bổ sung margin-bottom: 10px để các thẻ từ vựng không bị dính sát vào nhau
+        div.style.cssText = "background: var(--card-bg); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); margin-bottom: 10px;";
+        
         let checkboxHTML = isVocabBulkDeleteMode ? `<input type="checkbox" class="vocab-checkbox" value="${index}" style="width: 20px; height: 20px; margin-right: 15px; cursor: pointer; accent-color: var(--danger);">` : '';
+        
         div.innerHTML = `<div style="display: flex; align-items: center;">${checkboxHTML}<div style="cursor: grab; margin-right: 15px; font-size: 20px; color: var(--text-muted);" title="Kéo thả để sắp xếp">☰</div>
         <div><strong style="color: var(--primary); font-size: 18px;">${item.en}</strong> <span style="font-size:13px; color:var(--text-muted); margin-left:5px;">${item.type === 'structure' ? '[Cấu trúc]' : item.pos + ' ' + item.ipa}</span>
         <span style="background:var(--primary); color:#fff; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; font-weight:bold;">${item.topic || 'Chung'}</span>
         <div style="margin-top: 5px; font-size: 15px;">${item.vi}</div>${item.syn ? `<div style="font-size: 13px; color: #10b981; margin-top:3px;">Đồng nghĩa: ${item.syn}</div>` : ''}</div></div>
         <button class="btn btn-danger btn-sm" onclick="deleteVocab(${index})">Xóa</button>`;
+        
         listDiv.appendChild(div);
     });
+
+    // Tự động làm mới Menu lọc sau khi danh sách thay đổi (thêm, xóa, sửa từ vựng)
+    if (typeof updateManageTopicDropdown === 'function') {
+        updateManageTopicDropdown();
+        filterVocabTable();
+    }
 }
 
 function deleteVocab(index) { if(confirm("Bạn có chắc muốn xóa từ này khỏi kho không?")) { db.Vocabulary.splice(index, 1); localStorage.setItem('myStudyData', JSON.stringify(db)); renderVocabList(); } }
@@ -4672,4 +4699,69 @@ function handleFlashcardKeys(e) {
         e.preventDefault(); 
         flipFlashcard();
     }
+}
+
+/* ==========================================================================
+   TÍNH NĂNG NÂNG CẤP: LỌC & XÓA HÀNG LOẠT THEO CHỦ ĐỀ
+========================================================================== */
+
+function updateManageTopicDropdown() {
+    const filterSelect = document.getElementById('manage-vocab-filter');
+    if (!filterSelect) return;
+
+    const currentSelected = filterSelect.value || 'ALL';
+    const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))];
+
+    let html = '<option value="ALL">✨ Tất cả chủ đề</option>';
+    topics.forEach(t => {
+        html += `<option value="${t}">📁 ${t}</option>`;
+    });
+    filterSelect.innerHTML = html;
+
+    if (topics.includes(currentSelected) || currentSelected === 'ALL') {
+        filterSelect.value = currentSelected;
+    } else {
+        filterSelect.value = 'ALL';
+    }
+}
+
+function filterVocabTable() {
+    const filterSelect = document.getElementById('manage-vocab-filter');
+    if (!filterSelect) return;
+    
+    const targetTopic = filterSelect.value;
+    const rows = document.querySelectorAll('#vocab-manage-list .vocab-item-row');
+    
+    rows.forEach(row => {
+        const rowTopic = row.getAttribute('data-topic') || 'Chung';
+        if (targetTopic === 'ALL' || rowTopic === targetTopic) {
+            row.style.display = ''; 
+        } else {
+            row.style.display = 'none'; 
+        }
+    });
+}
+
+function deleteTopicBulk() {
+    const filterSelect = document.getElementById('manage-vocab-filter');
+    if (!filterSelect) return;
+
+    const selectedTopic = filterSelect.value;
+    if (selectedTopic === 'ALL') {
+        alert("⚠️ Không thể dùng tính năng này ở mục 'Tất cả chủ đề'. Vui lòng chọn một chủ đề cụ thể để xóa!");
+        return;
+    }
+
+    const countToDelete = db.Vocabulary.filter(v => (v.topic || 'Chung') === selectedTopic).length;
+    if (countToDelete === 0) return;
+
+    const confirmFirst = confirm(`❗ CẢNH BÁO: Bạn có chắc chắn muốn XÓA SẠCH toàn bộ ${countToDelete} từ vựng thuộc chủ đề "${selectedTopic}" không?`);
+    if (!confirmFirst) return;
+
+    // Lọc bỏ các từ thuộc chủ đề bị xóa
+    db.Vocabulary = db.Vocabulary.filter(v => (v.topic || 'Chung') !== selectedTopic);
+    localStorage.setItem('myStudyData', JSON.stringify(db));
+
+    alert(`🎉 Đã xóa sạch chủ đề "${selectedTopic}" (${countToDelete} từ vựng)!`);
+    renderVocabList(); 
 }
