@@ -1805,7 +1805,10 @@ function saveNewVocab() {
         pos: pos ? `(${pos})` : '', 
         vi: vi, 
         syn: syn, 
-        ant: ant 
+        ant: ant,
+        correctCount: 0, 
+        wrongCount: 0,
+        lastPlayed: Date.now()
     });
 
     // 5. Lưu xuống máy tính
@@ -1920,7 +1923,10 @@ function saveBulkVocab() {
                     ipa: ipa,
                     pos: pos ? (pos.includes('(') ? pos : `(${pos})`) : '', // Tự bọc dấu ngoặc cho Từ loại
                     syn: syn === '-' || syn === '' ? null : syn,
-                    ant: ant === '-' || ant === '' ? null : ant
+                    ant: ant === '-' || ant === '' ? null : ant,
+                    correctCount: 0, 
+                    wrongCount: 0,
+                    lastPlayed: Date.now()
                 });
                 successCount++;
             }
@@ -2179,11 +2185,11 @@ function generateVocabQuestion() {
         if (rand < 0.3) type = 'en_vi'; else if (rand < 0.6) type = 'vi_en'; else if (rand < 0.75 && hasSyn) type = 'synonym'; else if (rand < 0.85 && hasAnt) type = 'antonym'; else if (structures.length > 0) type = 'structure'; else type = 'en_vi'; 
         
         if (type === 'structure' && structures.length > 0) {
-            targetItem = structures[Math.floor(Math.random() * structures.length)]; questionText = `Cấu trúc nào có nghĩa là: "${targetItem.vi}"?`; correctAnswer = targetItem.en;
+            targetItem = getSmartRandomWord(structures); questionText = `Cấu trúc nào có nghĩa là: "${targetItem.vi}"?`; correctAnswer = targetItem.en;
             let pool = structures.length >= 4 ? structures : playingVocabPool; optionsArr = [correctAnswer, ...getRandomItems(pool, 3, targetItem).map(i => i.en)]; hint = "CẤU TRÚC"; valid = true;
         } else if (words.length > 0) {
             let validWords = words; if (type === 'synonym') validWords = words.filter(w => w.syn && w.syn !== '-'); if (type === 'antonym') validWords = words.filter(w => w.ant && w.ant !== '-'); if (validWords.length === 0) { type = 'en_vi'; validWords = words; }
-            targetItem = validWords[Math.floor(Math.random() * validWords.length)];
+            targetItem = getSmartRandomWord(validWords);
             
             if (type === 'en_vi') { questionText = `Nghĩa của từ "${targetItem.en}" ${targetItem.pos} là gì?`; correctAnswer = targetItem.vi; optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.vi)]; hint = "TỪ VỰNG"; valid = true; } 
             else if (type === 'vi_en') { questionText = `Từ nào có nghĩa là: "${targetItem.vi}"?`; correctAnswer = targetItem.en; optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; hint = "TỪ VỰNG"; valid = true; } 
@@ -2266,7 +2272,13 @@ function handleVocabAnswer(btnEl, selectedOpt) {
     let isCorrect = selectedOpt === vCurrentQuestion.correct;
     const cardEl = document.getElementById('vocab-question-card');
 
+    // --- LẤY TỪ VỰNG HIỆN TẠI ĐỂ GHI SỔ ---
+    let currentItem = vCurrentQuestion.item;
+
     if (isCorrect) { 
+        // BỔ SUNG: CỘNG ĐIỂM ĐÚNG
+        currentItem.correctCount = (currentItem.correctCount || 0) + 1;
+
         btnEl.classList.add('correct-btn'); 
         vStreak++; 
         if (vStreak > vMaxStreak) vMaxStreak = vStreak; 
@@ -2299,6 +2311,9 @@ function handleVocabAnswer(btnEl, selectedOpt) {
         }, 800); 
     } 
     else { 
+        // BỔ SUNG: CỘNG ĐIỂM SAI
+        currentItem.wrongCount = (currentItem.wrongCount || 0) + 1;
+
         btnEl.classList.add('incorrect-btn'); 
         document.querySelectorAll('#vocab-options-container .option-btn').forEach(b => { 
             if (b.innerText === vCurrentQuestion.correct) b.classList.add('correct-btn'); 
@@ -2314,6 +2329,10 @@ function handleVocabAnswer(btnEl, selectedOpt) {
         updateVocabUI(); 
         showVocabExplanation(); 
     }
+
+    // BỔ SUNG: LƯU LẠI VÀO BỘ NHỚ
+    currentItem.lastPlayed = Date.now();
+    localStorage.setItem('myStudyData', JSON.stringify(db));
 }
 
 function showVocabExplanation() {
@@ -4481,3 +4500,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optsContainer) uiObserver.observe(optsContainer, { childList: true, subtree: true });
     if (nextBtn) uiObserver.observe(nextBtn, { attributes: true, attributeFilter: ['class'] });
 });
+
+// THUẬT TOÁN SPACED REPETITION (CHỌN TỪ THEO TRỌNG SỐ)
+function getSmartRandomWord(pool) {
+    let totalWeight = 0;
+    
+    // 1. Tính trọng số cho từng từ
+    let weights = pool.map(word => {
+        let w = 10; // Trọng số cơ bản
+        let wrong = word.wrongCount || 0;
+        let correct = word.correctCount || 0;
+        
+        // Công thức: Sai 1 lần cộng 15 điểm. Đúng 1 lần trừ 5 điểm.
+        w += (wrong * 15); 
+        w -= (correct * 5); 
+        
+        // Không bao giờ để trọng số nhỏ hơn 1 (vẫn có tỉ lệ xuất hiện cực nhỏ để ôn tập)
+        w = Math.max(1, w); 
+        
+        totalWeight += w;
+        return w;
+    });
+
+    // 2. Quay xổ số dựa trên tổng trọng số
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < pool.length; i++) {
+        if (random < weights[i]) return pool[i];
+        random -= weights[i];
+    }
+    
+    // Backup an toàn
+    return pool[Math.floor(Math.random() * pool.length)]; 
+}
