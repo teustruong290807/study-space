@@ -1744,11 +1744,23 @@ if (rawTextArea) {
 }
 
 function toggleTheme() {
-    const body = document.body; body.classList.toggle('light-mode');
-    const isLight = body.classList.contains('light-mode');
-    localStorage.setItem('studyTheme', isLight ? 'light' : 'dark');
-    const btn = document.getElementById('theme-btn'); if (btn) btn.innerText = isLight ? '🌙' : '☀️';
+    // Đổi logic từ thêm class light-mode sang dark-mode
+    document.body.classList.toggle('dark-mode');
+    
+    // Lưu trạng thái vào localStorage
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
+
+// Chạy hàm này khi load trang để giữ nguyên theme người dùng đã chọn
+function loadSavedTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    // Nếu trước đó người dùng chọn dark thì bật dark-mode, còn không thì mặc định là sáng (ko làm gì cả)
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+    }
+}
+loadSavedTheme();
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('studyTheme');
