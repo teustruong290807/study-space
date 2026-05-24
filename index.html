@@ -114,14 +114,89 @@
             </div>
 
             <div id="screen-input" class="screen hidden">
-                <button class="btn btn-secondary" onclick="goBackToSubject()" style="margin-bottom: 20px;">&#8592; Quay lại thư mục</button>
-                <h2>Tạo bài luyện tập mới</h2>
-                <input type="text" id="quiz-title-input" placeholder="Nhập tên bài tập (VD: Đề ôn tập số 1...)">
-                <input type="number" id="quiz-time-limit" placeholder="Thời gian làm bài (Phút) - Để trống nếu không tính giờ">
-                <input type="text" id="quiz-youtube-link" placeholder="Link Video Youtube giải đề (Tùy chọn)..." style="border-color: #ef4444; color: #ef4444; font-weight: bold;">
-                <textarea id="raw-text" placeholder="Dán nội dung đề thi vào đây... (Có thể bấm Ctrl+V để dán ảnh)"></textarea>
-                <button class="btn btn-primary" style="width: 100%;" onclick="saveNewQuiz()">Lưu bài tập</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button class="btn btn-secondary" onclick="goBackToSubject()" style="padding: 10px 15px; border-radius: 12px;">
+                <i class="ph-bold ph-arrow-left"></i> Trở về
+            </button>
+            <h2 style="margin: 0; font-size: 24px; color: var(--text-main);">Thiết lập Đề Thi</h2>
+        </div>
+        <button class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;" onclick="saveNewQuiz()">
+            <i class="ph-bold ph-floppy-disk" style="margin-right: 5px;"></i> Lưu Bài Tập
+        </button>
+    </div>
+
+    <div class="compose-grid">
+        
+        <div class="compose-meta">
+            <div class="input-group">
+                <label>Tên bài tập <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="quiz-title-input" placeholder="VD: Đề kiểm tra định kỳ số 1...">
             </div>
+            
+            <div class="input-group">
+                <label>Thời gian làm bài (Phút)</label>
+                <input type="number" id="quiz-time-limit" placeholder="Để trống nếu không tính giờ">
+            </div>
+            
+            <div class="input-group">
+                <label>Video bài giảng (Link YouTube)</label>
+                <input type="text" id="quiz-youtube-link" placeholder="Dán link vào đây..." style="border-left: 4px solid var(--text-muted);">
+            </div>
+
+            <div class="syntax-guide">
+                <h4><i class="ph-fill ph-magic-wand"></i> Bảng Cú Pháp Nhanh</h4>
+                <ul>
+                    <li><code>*A.</code> Đặt dấu <b>*</b> trước đáp án đúng</li>
+                    <li><code>[IMG: url]</code> Chèn hình ảnh</li>
+                    <li><code>[AUDIO: url]</code> Chèn file nghe</li>
+                    <li><code>Giải thích:</code> Ghi chú lời giải ở cuối</li>
+                    <li><code>[WRITING]</code> Tạo câu Tự luận</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="compose-editor">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; gap: 10px; background: var(--card-bg-elevated); padding: 6px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <button id="tab-raw" class="btn btn-primary btn-sm" style="box-shadow: none; padding: 8px 15px;" onclick="switchComposeMode('raw')"><i class="ph-bold ph-pen-nib"></i> Soạn Nhanh (AI)</button>
+                    <button id="tab-builder" class="btn btn-secondary btn-sm" style="border: none; padding: 8px 15px;" onclick="switchComposeMode('builder')"><i class="ph-bold ph-puzzle-piece"></i> Lắp ráp Thủ công</button>
+                </div>
+                <span style="font-size: 13px; color: var(--text-muted); background: var(--bg-main); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 5px;">
+                    <i class="ph-bold ph-info"></i> Ctrl+V dán ảnh
+                </span>
+            </div>
+            
+            <textarea id="raw-text" placeholder="Dán toàn bộ nội dung đề thi của bạn vào đây...&#10;&#10;Hoặc chuyển sang tab [Lắp ráp Thủ công] để hệ thống tự động sinh cấu trúc câu hỏi cho bạn!"></textarea>
+
+            <div id="builder-mode" class="hidden" style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;">
+                
+                <div style="background: var(--card-bg-elevated); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <label style="font-weight: bold; font-size: 14px; margin-bottom: 8px; display: block; color: var(--text-muted);">Loại câu hỏi muốn thêm:</label>
+                    <select id="builder-type" class="builder-input" onchange="changeBuilderType()" style="padding: 12px; background: var(--bg-main); font-weight: bold; cursor: pointer;">
+                        <option value="abcd">🔘 Trắc nghiệm 4 lựa chọn (A, B, C, D)</option>
+                        <option value="tf">⚖️ Cụm câu hỏi Đúng/Sai (A, B, C, D)</option>
+                        <option value="short">✍️ Câu hỏi Trả lời ngắn</option>
+                    </select>
+                </div>
+
+                <textarea id="builder-q" class="builder-input" placeholder="Nhập nội dung câu hỏi hoặc đoạn văn..." style="min-height: 100px; resize: vertical;"></textarea>
+
+                <div id="builder-options-area" style="display: flex; flex-direction: column; gap: 10px;">
+                    </div>
+
+                <textarea id="builder-exp" class="builder-input" placeholder="Nhập lời giải thích đáp án (tùy chọn)..." style="min-height: 80px; resize: vertical;"></textarea>
+
+                <button class="btn btn-primary" style="padding: 16px; font-size: 16px; width: 100%; margin-top: auto; justify-content: center; box-shadow: var(--shadow-float);" onclick="insertBuiltQuestion()">
+                    <i class="ph-bold ph-plus-circle" style="font-size: 20px; margin-right: 8px;"></i> CHÈN CÂU NÀY VÀO ĐỀ
+                </button>
+            </div>
+
+        </div>
+        
+    </div>
+</div>
 
             <div id="screen-practice" class="screen hidden">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; flex-wrap: wrap; gap: 10px;">
