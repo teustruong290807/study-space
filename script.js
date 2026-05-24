@@ -272,10 +272,16 @@ function goHome() {
     let quizCount = 0;
     
     for (const subject in db) {
-        if (subject === "Vocabulary" || subject === "Documents") continue; 
-        
-        subjectCount++;
-        quizCount += db[subject].length; // Đếm tổng số đề thi
+    if (subject === "Vocabulary" || subject === "Documents") continue;
+
+    // 🔒 Thêm dòng kiểm tra này:
+    if (!Array.isArray(db[subject])) {
+        console.warn(`⚠️ Dữ liệu môn "${subject}" không đúng định dạng, bỏ qua.`);
+        continue; // Bỏ qua môn này nếu không phải mảng
+    }
+
+    subjectCount++;
+    quizCount += db[subject].length; // Đếm tổng số đề thi
         
         const div = document.createElement('div');
         div.className = 'subject-card';
