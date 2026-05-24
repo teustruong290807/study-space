@@ -4904,3 +4904,129 @@ function isTopicUnlocked(topicName) {
         return false;
     }
 }
+
+/* ==========================================================================
+   TÍNH NĂNG MACRO BUILDER: LẮP RÁP CÂU HỎI THỦ CÔNG
+========================================================================== */
+
+function switchComposeMode(mode) {
+    if(mode === 'raw') {
+        document.getElementById('tab-raw').className = 'btn btn-primary btn-sm';
+        document.getElementById('tab-raw').style.boxShadow = '';
+        document.getElementById('tab-builder').className = 'btn btn-secondary btn-sm';
+        document.getElementById('tab-builder').style.border = 'none';
+        
+        document.getElementById('raw-text').classList.remove('hidden');
+        document.getElementById('builder-mode').classList.add('hidden');
+    } else {
+        document.getElementById('tab-builder').className = 'btn btn-primary btn-sm';
+        document.getElementById('tab-builder').style.boxShadow = '';
+        document.getElementById('tab-raw').className = 'btn btn-secondary btn-sm';
+        document.getElementById('tab-raw').style.border = 'none';
+        
+        document.getElementById('builder-mode').classList.remove('hidden');
+        document.getElementById('raw-text').classList.add('hidden');
+        
+        // Khởi tạo Form khi vừa chuyển tab
+        if(document.getElementById('builder-options-area').innerHTML.trim() === '') {
+            changeBuilderType(); 
+        }
+    }
+}
+
+function changeBuilderType() {
+    const type = document.getElementById('builder-type').value;
+    const area = document.getElementById('builder-options-area');
+    area.innerHTML = '';
+    
+    if (type === 'abcd') {
+        const labels = ['A', 'B', 'C', 'D'];
+        labels.forEach((l, i) => {
+            area.innerHTML += `
+            <div class="builder-row">
+                <input type="radio" name="b_abcd_correct" value="${i}" ${i===0?'checked':''} style="width:20px; height:20px; cursor:pointer; accent-color: var(--primary);">
+                <span style="font-weight:900; font-size:16px; width:25px; color: var(--primary);">${l}.</span>
+                <input type="text" id="b_abcd_opt_${i}" class="builder-input" placeholder="Phương án ${l}..." style="border:none; background:transparent; padding:12px 0;">
+            </div>`;
+        });
+    } 
+    else if (type === 'tf') {
+        const labels = ['a', 'b', 'c', 'd'];
+        labels.forEach((l, i) => {
+            area.innerHTML += `
+            <div class="builder-row">
+                <select id="b_tf_correct_${i}" style="padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">
+                    <option value="true">ĐÚNG</option>
+                    <option value="false">SAI</option>
+                </select>
+                <span style="font-weight:900; font-size:16px; width:25px; margin-left: 10px; color: var(--primary);">${l})</span>
+                <input type="text" id="b_tf_opt_${i}" class="builder-input" placeholder="Nội dung mệnh đề ${l}..." style="border:none; background:transparent; padding:12px 0;">
+            </div>`;
+        });
+    } 
+    else if (type === 'short') {
+        area.innerHTML = `
+            <div style="background:var(--card-bg-elevated); padding:15px; border-radius:12px; border:1px solid var(--border-color);">
+                <label style="font-size:13px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:8px;">Nhập đáp án chính xác nhất (Học sinh phải điền khớp):</label>
+                <input type="text" id="b_short_ans" class="builder-input" placeholder="VD: Năm 1945..." style="padding:14px; background:var(--bg-main);">
+            </div>
+        `;
+    }
+}
+
+function insertBuiltQuestion() {
+    const type = document.getElementById('builder-type').value;
+    const qText = document.getElementById('builder-q').value.trim();
+    const expText = document.getElementById('builder-exp').value.trim();
+    
+    if (!qText) { alert('⚠️ Vui lòng nhập nội dung câu hỏi trước khi chèn!'); return; }
+    
+    // Thuật toán: Tự động đếm xem đã có bao nhiêu chữ "Câu x:" để chèn số tiếp theo
+    const rawTextArea = document.getElementById('raw-text');
+    const currentRaw = rawTextArea.value;
+    const qMatches = currentRaw.match(/(?:Câu|Question|Bài)\s*\d+/gi);
+    let nextQNum = (qMatches ? qMatches.length : 0) + 1;
+    
+    let output = `Câu ${nextQNum}: ${qText}\n`;
+    
+    // Sinh đáp án theo cấu trúc
+    if (type === 'abcd') {
+        const labels = ['A', 'B', 'C', 'D'];
+        const correctIndex = document.querySelector('input[name="b_abcd_correct"]:checked').value;
+        for(let i=0; i<4; i++) {
+            let optVal = document.getElementById(`b_abcd_opt_${i}`).value.trim() || `Phương án ${labels[i]}`;
+            if (i.toString() === correctIndex.toString()) { output += `*${labels[i]}. ${optVal}\n`; } 
+            else { output += `${labels[i]}. ${optVal}\n`; }
+        }
+    } 
+    else if (type === 'tf') {
+        const labels = ['a', 'b', 'c', 'd'];
+        for(let i=0; i<4; i++) {
+            let isTrue = document.getElementById(`b_tf_correct_${i}`).value === 'true';
+            let optVal = document.getElementById(`b_tf_opt_${i}`).value.trim() || `Mệnh đề ${labels[i]}`;
+            if (isTrue) { output += `*${labels[i]}) ${optVal}\n`; } 
+            else { output += `${labels[i]}) ${optVal}\n`; }
+        }
+    } 
+    else if (type === 'short') {
+        let shortAns = document.getElementById('b_short_ans').value.trim() || 'Đáp án chưa xác định';
+        output += `Đáp án: ${shortAns}\n`;
+    }
+    
+    // Gắn thêm giải thích
+    if (expText) { output += `Giải thích: ${expText}\n`; }
+    output += `\n`;
+    
+    // Bắn dữ liệu vào ô Raw Text (Xuống dòng cho đẹp)
+    if (currentRaw && !currentRaw.endsWith('\n\n')) { rawTextArea.value += '\n\n' + output; } 
+    else { rawTextArea.value += output; }
+    
+    // Dọn dẹp ô nhập liệu để nhập câu tiếp theo
+    document.getElementById('builder-q').value = '';
+    document.getElementById('builder-exp').value = '';
+    changeBuilderType(); 
+    
+    // Chuyển về màn hình Soạn Nhanh để xem kết quả và cuộn xuống dưới cùng
+    switchComposeMode('raw');
+    rawTextArea.scrollTop = rawTextArea.scrollHeight;
+}
