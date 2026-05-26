@@ -2103,6 +2103,7 @@ async function updateVocabRanking(topic, score, streak) {
 }
 
 // 1. Mở màn hình Game: Nạp trạng thái đã lưu vào các nút gạt
+// 1. Mở màn hình Game: Nạp trạng thái đã lưu vào các nút gạt
 function openVocabGame() {
     if (!db.Vocabulary || db.Vocabulary.length < 4) { 
         alert("⚠️ Kho từ vựng cần ít nhất 4 từ!"); return; 
@@ -2130,15 +2131,6 @@ function openVocabGame() {
     document.getElementById('vocab-game-over').classList.add('hidden');
 }
 
-    
-    // [MỚI] Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
-    const bottomNav = document.getElementById('bottom-nav');
-    if (bottomNav) bottomNav.style.display = 'none';
-
-    vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5; 
-    updateVocabUI();
-}
-
 // 2. Bắt đầu Game: Đọc các nút gạt và áp dụng vào game
 function startVocabGame() {
     const selectedTopic = document.getElementById('vocab-topic-select').value;
@@ -2160,6 +2152,10 @@ function startVocabGame() {
     document.getElementById('vocab-game-play-area').classList.remove('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
     
+    // [MỚI] Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
+    const bottomNav = document.getElementById('bottom-nav');
+    if (bottomNav) bottomNav.style.display = 'none';
+
     vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5;
     updateVocabUI();
     
