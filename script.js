@@ -4311,61 +4311,89 @@ function openVocabGameFromParams() {
         dashboard.style.margin = '0'; dashboard.style.width = '100vw'; dashboard.style.height = '100vh'; dashboard.style.borderRadius = '0'; dashboard.style.border = 'none';
     }
 
-    // Bảng yêu cầu nhập tên
+    // Gọi bảng chọn chế độ thông minh cho chủ đề này
+    showIsolatedVocabMenu(topic);
+}
+
+// HÀM MỚI: Tạo bảng chọn chế độ bất tử (Dùng lúc mới vào link và lúc đóng Flashcard)
+function showIsolatedVocabMenu(topic) {
+    // Xóa overlay cũ nếu còn sót để tránh trùng lặp giao diện
+    const oldOverlay = document.getElementById('vocab-isolated-overlay');
+    if (oldOverlay) oldOverlay.remove();
+
     const overlay = document.createElement('div');
+    overlay.id = 'vocab-isolated-overlay';
     overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-main); z-index:99999; display:flex; align-items:center; justify-content:center;";
+    
     const box = document.createElement('div');
     box.style.cssText = "background:var(--card-bg); padding:35px; border-radius:16px; border:1px solid var(--border-color); text-align:center; max-width:400px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.9); animation: fadeInUp 0.4s ease;";
 
     const savedName = localStorage.getItem('studentName') || "";
 
-    // NÂNG CẤP: Bổ sung thêm nút bấm Ôn tập Flashcard
+    // Xử lý logic hiển thị: Nếu chưa có tên thì bắt nhập, nếu có rồi thì hiển thị lời chào
+    let nameSectionHtml = "";
+    if (!savedName) {
+        nameSectionHtml = `
+            <div style="text-align: left; margin-bottom: 25px;">
+                <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
+                <input type="text" id="guest-name" value="" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
+            </div>
+        `;
+    } else {
+        nameSectionHtml = `
+            <p style="color:var(--text-main); font-weight: bold; margin-bottom: 25px; font-size: 16px;">Chào mừng em quay lại, <span style="color:var(--primary); text-decoration: underline;">${savedName}</span>! 👋</p>
+        `;
+    }
+
     box.innerHTML = `
         <div style="font-size: 40px; margin-bottom: 10px;">🎮</div>
-        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Game Từ Vựng!</h3>
+        <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Luyện Tập Từ Vựng</h3>
         <p style="color:var(--text-muted); margin-bottom:20px; line-height:1.5;">Chủ đề: <strong style="color:var(--text-main);">${topic === 'ALL' ? 'Tất cả' : topic}</strong></p>
-        <div style="text-align: left; margin-bottom: 25px;">
-            <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
-            <input type="text" id="guest-name" value="${savedName}" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
-        </div>
+        
+        ${nameSectionHtml}
+
         <div style="display:flex; flex-direction:column; gap:12px;">
-            <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Luyện Tập</button>
-            <button id="btn-flashcard-guest" class="btn btn-secondary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px; border-color: var(--primary); color: var(--primary);">📖 Flashcard</button>
+            <button id="btn-flashcard-guest" class="btn btn-secondary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px; border-color: var(--primary); color: var(--primary); font-weight: bold;">📖 Ôn Tập Flashcard</button>
+            <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Bắt Đầu Chiến (Quiz Game)</button>
         </div>
     `;
 
-    overlay.appendChild(box); document.body.appendChild(overlay);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
 
-    // Xử lý chung cho cả 2 nút
-    const handleGuestLogin = () => {
-        const name = document.getElementById('guest-name').value.trim();
-        if (!name) { alert("⚠️ Vui lòng nhập tên của em nhé!"); document.getElementById('guest-name').focus(); return false; }
-        localStorage.setItem('studentName', name);
-        document.body.removeChild(overlay);
+    // Hàm kiểm tra tên trước khi vào học
+    const verifyAndContinue = () => {
+        if (!localStorage.getItem('studentName')) {
+            const inputName = document.getElementById('guest-name').value.trim();
+            if (!inputName) {
+                alert("⚠️ Vui lòng nhập tên của em nhé!");
+                document.getElementById('guest-name').focus();
+                return false;
+            }
+            localStorage.setItem('studentName', inputName);
+        }
+        overlay.remove(); // Xóa bảng chọn mode để vào bài
         return true;
     };
 
-    // Sự kiện Nút 1: Vào Game Quiz
+    // Sự kiện chọn chế độ Quiz Game
     document.getElementById('btn-start-vocab-guest').onclick = () => {
-        if (handleGuestLogin()) {
+        if (verifyAndContinue()) {
             openVocabGame();
             setTimeout(() => {
                 const select = document.getElementById('vocab-topic-select');
-                if (select) { select.value = topic; initVocabGame(); }
+                if (select) { select.value = topic; startVocabGame(); }
             }, 100);
         }
     };
 
-    // Sự kiện Nút 2: Vào Flashcard
+    // Sự kiện chọn chế độ Flashcard
     document.getElementById('btn-flashcard-guest').onclick = () => {
-        if (handleGuestLogin()) {
-            openVocabGame(); // Mở ngầm để set UI nền
+        if (verifyAndContinue()) {
+            openVocabGame(); // Chạy nền cấu hình gốc
             setTimeout(() => {
                 const select = document.getElementById('vocab-topic-select');
-                if (select) { 
-                    select.value = topic; 
-                    openFlashcardMode(); // Gọi thẳng hàm mở Flashcard
-                }
+                if (select) { select.value = topic; openFlashcardMode(); }
             }, 100);
         }
     };
@@ -4815,6 +4843,13 @@ function closeFlashcardMode() {
     if (overlay) overlay.classList.add('hidden');
     document.removeEventListener('keydown', handleFlashcardKeys); // Hủy lắng nghe phím tắt để tránh xung đột
     window.speechSynthesis.cancel(); // Ngắt ngay lập tức giọng đọc đang phát
+
+    // NÂNG CẤP: Nếu đang ở chế độ share link (cách ly), quay lại bảng chọn 2 Mode của chính bộ từ vựng đó
+    if (isIsolatedMode) {
+        const select = document.getElementById('vocab-topic-select');
+        const currentTopic = select ? select.value : 'ALL';
+        showIsolatedVocabMenu(currentTopic);
+    }
 }
 
 function handleFlashcardKeys(e) {
