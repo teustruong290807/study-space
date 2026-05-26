@@ -2122,11 +2122,14 @@ function openVocabGame() {
         alert("⚠️ Kho từ vựng cần ít nhất 4 từ hợp lệ!"); return; 
     }
     showScreen('screen-vocab-game'); 
-    document.getElementById('app-title').innerText = "Game Từ Vựng";
+    
+    const appTitle = document.getElementById('app-title');
+    if (appTitle) appTitle.innerText = "Game Từ Vựng";
 
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav && !isIsolatedMode) bottomNav.style.display = 'flex';
     
+    // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM (Dropdown chủ đề) ---
     const topics = [...new Set(db.Vocabulary.map(item => item.topic || 'Uncategorized'))];
     const select = document.getElementById('vocab-topic-select');
     if (select) {
@@ -2134,8 +2137,21 @@ function openVocabGame() {
         topics.forEach(t => select.innerHTML += `<option value="${t}">${t}</option>`);
     }
     
-    document.getElementById('vocab-total-words').innerText = db.Vocabulary.length;
+    // [ĐÃ FIX LỖI NULL TRÊN HTML] Khớp ID với giao diện Bento Box
+    const wordCountEl = document.getElementById('bento-total-words'); 
+    if (wordCountEl) wordCountEl.innerText = db.Vocabulary.length;
     
+    const topicCountEl = document.getElementById('bento-total-topics');
+    if (topicCountEl) topicCountEl.innerText = topics.length;
+
+    // Lấy kỷ lục điểm & streak hiển thị lên Bento
+    let records = JSON.parse(localStorage.getItem('vocabRecords')) || { maxScore: 0, maxStreak: 0 };
+    const maxScoreEl = document.getElementById('bento-max-score');
+    const maxStreakEl = document.getElementById('bento-max-streak');
+    if (maxScoreEl) maxScoreEl.innerText = records.maxScore;
+    if (maxStreakEl) maxStreakEl.innerText = records.maxStreak;
+    
+    // Hiển thị màn hình sảnh, giấu các màn hình khác
     document.getElementById('vocab-start-menu').classList.remove('hidden');
     document.getElementById('vocab-game-play-area').classList.add('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
