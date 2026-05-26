@@ -4319,6 +4319,7 @@ function openVocabGameFromParams() {
 
     const savedName = localStorage.getItem('studentName') || "";
 
+    // NÂNG CẤP: Bổ sung thêm nút bấm Ôn tập Flashcard
     box.innerHTML = `
         <div style="font-size: 40px; margin-bottom: 10px;">🎮</div>
         <h3 style="margin-top:0; color:var(--primary); font-size:22px;">Game Từ Vựng!</h3>
@@ -4327,23 +4328,46 @@ function openVocabGameFromParams() {
             <label style="font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 5px; display: block;">Họ và tên của em:</label>
             <input type="text" id="guest-name" value="${savedName}" placeholder="Nhập họ và tên thật..." style="width:100%; padding: 14px; margin-bottom: 15px; border-radius: 8px; border: 2px solid var(--border-color); font-size: 16px; font-weight: bold; color: var(--primary); text-align: center;">
         </div>
-        <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Bắt Đầu Chiến</button>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Luyện Tập</button>
+            <button id="btn-flashcard-guest" class="btn btn-secondary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px; border-color: var(--primary); color: var(--primary);">📖 Flashcard</button>
+        </div>
     `;
 
     overlay.appendChild(box); document.body.appendChild(overlay);
 
-    document.getElementById('btn-start-vocab-guest').onclick = () => {
+    // Xử lý chung cho cả 2 nút
+    const handleGuestLogin = () => {
         const name = document.getElementById('guest-name').value.trim();
-        if (!name) { alert("⚠️ Vui lòng nhập tên của em nhé!"); document.getElementById('guest-name').focus(); return; }
+        if (!name) { alert("⚠️ Vui lòng nhập tên của em nhé!"); document.getElementById('guest-name').focus(); return false; }
         localStorage.setItem('studentName', name);
         document.body.removeChild(overlay);
+        return true;
+    };
 
-        // Mở game và tự động chiến
-        openVocabGame();
-        setTimeout(() => {
-            const select = document.getElementById('vocab-topic-select');
-            if (select) { select.value = topic; initVocabGame(); }
-        }, 100);
+    // Sự kiện Nút 1: Vào Game Quiz
+    document.getElementById('btn-start-vocab-guest').onclick = () => {
+        if (handleGuestLogin()) {
+            openVocabGame();
+            setTimeout(() => {
+                const select = document.getElementById('vocab-topic-select');
+                if (select) { select.value = topic; initVocabGame(); }
+            }, 100);
+        }
+    };
+
+    // Sự kiện Nút 2: Vào Flashcard
+    document.getElementById('btn-flashcard-guest').onclick = () => {
+        if (handleGuestLogin()) {
+            openVocabGame(); // Mở ngầm để set UI nền
+            setTimeout(() => {
+                const select = document.getElementById('vocab-topic-select');
+                if (select) { 
+                    select.value = topic; 
+                    openFlashcardMode(); // Gọi thẳng hàm mở Flashcard
+                }
+            }, 100);
+        }
     };
 }
 
