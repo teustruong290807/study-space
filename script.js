@@ -2103,15 +2103,20 @@ async function updateVocabRanking(topic, score, streak) {
 }
 
 // 1. Mở màn hình Game: Nạp trạng thái đã lưu vào các nút gạt
-// 1. Mở màn hình Game: Nạp trạng thái đã lưu vào các nút gạt
 function openVocabGame() {
+    // [TỰ ĐỘNG DỌN RÁC] Xóa các từ vựng bị hỏng [object HTMLButtonElement] do dán nhầm trước đó
+    if (db.Vocabulary) {
+        db.Vocabulary = db.Vocabulary.filter(v => typeof v.en === 'string' && typeof v.vi === 'string' && !v.en.includes('[object') && !v.vi.includes('[object'));
+        localStorage.setItem('myStudyData', JSON.stringify(db));
+    }
+
     if (!db.Vocabulary || db.Vocabulary.length < 4) { 
-        alert("⚠️ Kho từ vựng cần ít nhất 4 từ!"); return; 
+        alert("⚠️ Kho từ vựng cần ít nhất 4 từ hợp lệ!"); return; 
     }
     showScreen('screen-vocab-game'); 
     document.getElementById('app-title').innerText = "Game Từ Vựng";
 
-    // Bật lại thanh Điều hướng khi đang ở sảnh chờ (Trừ khi đang bị khóa bằng Share Link)
+    // Bật lại thanh Điều hướng khi đang ở sảnh chờ (Trừ khi bị khóa bằng Share Link)
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav && !isIsolatedMode) bottomNav.style.display = 'flex';
     
@@ -2136,9 +2141,13 @@ function startVocabGame() {
     const selectedTopic = document.getElementById('vocab-topic-select').value;
     
     // ĐỌC CÀI ĐẶT TỪ CÁC NÚT GẠT TRƯỚC KHI VÀO GAME
-    vSettings.autoTTS = document.getElementById('start-set-tts').checked;
-    vSettings.timer = document.getElementById('start-set-timer').checked;
-    vSettings.effects = document.getElementById('start-set-effects').checked;
+    const ttsCheckbox = document.getElementById('start-set-tts');
+    const timerCheckbox = document.getElementById('start-set-timer');
+    const effectsCheckbox = document.getElementById('start-set-effects');
+    
+    vSettings.autoTTS = ttsCheckbox ? ttsCheckbox.checked : false;
+    vSettings.timer = timerCheckbox ? timerCheckbox.checked : true;
+    vSettings.effects = effectsCheckbox ? effectsCheckbox.checked : true;
     localStorage.setItem('vocabSettings', JSON.stringify(vSettings));
 
     currentVocabTopic = selectedTopic;
@@ -2152,15 +2161,19 @@ function startVocabGame() {
     document.getElementById('vocab-game-play-area').classList.remove('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
     
-    // [MỚI] Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
+    // Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav) bottomNav.style.display = 'none';
 
-    vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5;
+    vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5; 
     updateVocabUI();
     
-    if (selectedTopic !== 'ALL') displayVocabRanking(selectedTopic);
-    else document.getElementById('vocab-rankings')?.classList.add('hidden');
+    if (selectedTopic !== 'ALL') {
+        displayVocabRanking(selectedTopic);
+    } else {
+        const rankingBox = document.getElementById('vocab-rankings');
+        if (rankingBox) rankingBox.classList.add('hidden');
+    }
 
     generateVocabQuestion();
 }
