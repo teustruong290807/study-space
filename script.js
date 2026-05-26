@@ -2556,7 +2556,8 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         max-width: 600px; /* Khớp với giao diện điện thoại/Web thu nhỏ */
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
-        padding: 20px 20px 30px 20px;
+        /* Bơm thêm đệm dưới đáy cho các dòng iPhone tai thỏ */
+        padding: 20px 20px calc(30px + env(safe-area-inset-bottom)) 20px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
