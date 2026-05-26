@@ -2110,33 +2110,26 @@ function openVocabGame() {
     showScreen('screen-vocab-game'); 
     document.getElementById('app-title').innerText = "Game Từ Vựng";
 
-    // [MỚI] Bật lại thanh Điều hướng khi đang ở sảnh chờ (Trừ khi đang bị khóa bằng Share Link)
+    // Bật lại thanh Điều hướng khi đang ở sảnh chờ (Trừ khi đang bị khóa bằng Share Link)
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav && !isIsolatedMode) bottomNav.style.display = 'flex';
     
-    // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM ---
-    const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))]; 
-    document.getElementById('bento-total-words').innerText = db.Vocabulary.length;
-    document.getElementById('bento-total-topics').innerText = topics.length;
-
-    // Nạp kỷ lục cá nhân lên giao diện
-    const records = JSON.parse(localStorage.getItem('vocabRecords')) || { maxScore: 0, maxStreak: 0 };
-    document.getElementById('bento-max-score').innerText = records.maxScore;
-    document.getElementById('bento-max-streak').innerText = records.maxStreak;
-
-    // Đồng bộ các nút gạt với vSettings hiện tại
-    document.getElementById('start-set-tts').checked = vSettings.autoTTS;
-    document.getElementById('start-set-timer').checked = vSettings.timer;
-    document.getElementById('start-set-effects').checked = vSettings.effects;
-
-    // Hiển thị danh sách chủ đề
+    // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM (Dropdown chủ đề) ---
+    const topics = [...new Set(db.Vocabulary.map(item => item.topic || 'Uncategorized'))];
     const select = document.getElementById('vocab-topic-select');
-    select.innerHTML = '<option value="ALL">🌟 Trộn Tất cả từ vựng</option>'; 
-    topics.forEach(t => { select.innerHTML += `<option value="${t}">📁 Chủ đề: ${t}</option>`; });
+    if (select) {
+        select.innerHTML = '<option value="ALL">Tất cả chủ đề</option>';
+        topics.forEach(t => select.innerHTML += `<option value="${t}">${t}</option>`);
+    }
     
-    document.getElementById('vocab-start-menu').classList.add('hidden');
-    document.getElementById('vocab-game-play-area').classList.remove('hidden');
+    document.getElementById('vocab-total-words').innerText = db.Vocabulary.length;
+    
+    // Hiển thị màn hình sảnh, giấu các màn hình khác
+    document.getElementById('vocab-start-menu').classList.remove('hidden');
+    document.getElementById('vocab-game-play-area').classList.add('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
+}
+
     
     // [MỚI] Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
     const bottomNav = document.getElementById('bottom-nav');
