@@ -2021,7 +2021,7 @@ function saveBulkVocab() {
     if (typeof renderVocabList === 'function') renderVocabList();
 }
 
-let playingVocabPool = []; let vScore = 0, vStreak = 0, vMaxStreak = 0, vLives = 3; let vCurrentQuestion = null; let currentVocabTopic = "";
+let playingVocabPool = []; let vScore = 0, vStreak = 0, vMaxStreak = 0, vLives = 5; let vCurrentQuestion = null; let currentVocabTopic = "";
 
 async function fetchVocabRanking(topic) {
     try {
@@ -2157,7 +2157,7 @@ function startVocabGame() {
     document.getElementById('vocab-game-play-area').classList.remove('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
     
-    vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 3;
+    vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5;
     updateVocabUI();
     
     if (selectedTopic !== 'ALL') displayVocabRanking(selectedTopic);
@@ -2170,7 +2170,7 @@ function initVocabGame() { startVocabGame(); }
 
 function updateVocabUI() {
     document.getElementById('vocab-score').innerText = vScore; document.getElementById('vocab-streak').innerText = vStreak;
-    let hearts = ""; for(let i=0; i<3; i++) hearts += i < vLives ? "❤️" : "🖤"; document.getElementById('vocab-lives').innerText = hearts;
+    let hearts = ""; for(let i=0; i<5; i++) hearts += i < vLives ? "❤️" : "🖤"; document.getElementById('vocab-lives').innerText = hearts;
 }
 
 function getRandomItems(arr, count, excludeItem) { let filtered = arr.filter(item => item !== excludeItem); return filtered.sort(() => Math.random() - 0.5).slice(0, count); }
@@ -2360,6 +2360,12 @@ function handleVocabAnswer(btnEl, selectedOpt) {
         btnEl.classList.add('correct-btn'); 
         vStreak++; 
         if (vStreak > vMaxStreak) vMaxStreak = vStreak; 
+
+        // [MỚI] HỒI TIM: Đúng 3 câu liên tiếp (bội số của 3: 3, 6, 9...) và tim hiện tại < 5
+        if (vStreak % 3 === 0 && vLives < 5) {
+            vLives++;
+            if (typeof showFloatingPoints === 'function') showFloatingPoints(btnEl, "+1 ❤️ Hồi máu");
+        } 
         
         let pointsEarned = 10;
         if (vSettings.timer) {
@@ -2435,15 +2441,40 @@ function nextVocabQuestion() {
         document.getElementById('vocab-final-streak').innerText = vMaxStreak;
 
         // BỔ SUNG: Kiểm soát nút Chơi Lại ở Game Từ Vựng
-        const replayBtn = document.querySelector('#vocab-game-over button');
-        if (replayBtn) {
+        // [MỚI] TẠO NÚT CHƠI LẠI VÀ NÚT FLASHCARD Ở MÀN HÌNH GAME OVER
+        const gameOverContainer = document.getElementById('vocab-game-over');
+        if (gameOverContainer) {
+            // Xóa các nút cũ để tạo 2 nút mới (đẹp và gọn hơn)
+            const oldBtns = gameOverContainer.querySelectorAll('button, .action-btns-group');
+            oldBtns.forEach(b => b.remove());
+            
+            let actionBtnsHTML = `
+                <div class="action-btns-group" style="display:flex; flex-direction:column; gap:12px; margin-top:25px; width: 100%;">
+                    <button class="btn btn-primary" style="width:100%; justify-content:center; padding:15px; font-size:16px;" id="btn-replay-vocab">🔄 Chơi Lại Từ Đầu</button>
+            `;
+            
             if (isIsolatedMode) {
-                // Nếu bị nhốt: Bỏ qua màn hình Chọn Chủ đề, bắt ép chơi lại chính chủ đề hiện tại
-                replayBtn.onclick = startVocabGame; 
+                // Đang share link -> Nút 2 cho phép đổi qua Flashcard
+                actionBtnsHTML += `<button class="btn btn-secondary" style="width:100%; justify-content:center; padding:15px; font-size:16px; border-color:var(--primary); color:var(--primary);" id="btn-flashcard-vocab">📖 Đổi sang Flashcard</button>`;
             } else {
-                // Bình thường: Đưa về màn hình chọn chủ đề
-                replayBtn.onclick = openVocabGame;
+                // Chơi bình thường -> Nút 2 là thoát về chọn bài
+                actionBtnsHTML += `<button class="btn btn-secondary" style="width:100%; justify-content:center; padding:15px; font-size:16px;" id="btn-flashcard-vocab">🔙 Chọn Bộ Khác</button>`;
             }
+            actionBtnsHTML += `</div>`;
+            gameOverContainer.insertAdjacentHTML('beforeend', actionBtnsHTML);
+
+            // Gắn sự kiện cho 2 nút vừa tạo
+            document.getElementById('btn-replay-vocab').onclick = () => {
+                if (isIsolatedMode) startVocabGame(); else openVocabGame();
+            };
+
+            document.getElementById('btn-flashcard-vocab').onclick = () => {
+                if (isIsolatedMode) {
+                    showIsolatedVocabMenu(currentVocabTopic); // Gọi bảng chọn chế độ lúc Share Link
+                } else {
+                    openVocabGame(); // Trở về sảnh từ vựng
+                }
+            };
         }
 
     } else {
