@@ -1165,11 +1165,22 @@ function getAudioCtx() {
 function playCorrectSound() {
     try {
         const ctx = getAudioCtx();
-        const osc = ctx.createOscillator(); const gainNode = ctx.createGain();
-        osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); 
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3); 
-        osc.connect(gainNode); gainNode.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.3);
+        const osc = ctx.createOscillator(); 
+        const gainNode = ctx.createGain();
+        
+        // Âm thanh đúng: Tần số trầm ấm hơn, ngân dài tạo độ vang nhẹ
+        osc.type = 'sine'; 
+        osc.frequency.setValueAtTime(500, ctx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.1); 
+        
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime); 
+        // Kéo dài thời gian release từ 0.3 lên 1.0 giây để tạo tiếng vang (echo)
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0); 
+        
+        osc.connect(gainNode); 
+        gainNode.connect(ctx.destination);
+        osc.start(); 
+        osc.stop(ctx.currentTime + 1.0);
     } catch (e) {}
 }
 
@@ -1184,18 +1195,10 @@ function playErrorSound() {
     } catch (e) {}
 }
 
+// Bỏ tính năng đẩy cao độ âm thanh (Pitch up), giờ combo cũng sẽ phát âm thanh mượt mà như bình thường
 function playComboSound(streakCount) {
-    try {
-        const ctx = getAudioCtx();
-        const osc = ctx.createOscillator(); const gainNode = ctx.createGain();
-        osc.type = 'square'; let baseFreq = 400 + (streakCount * 50); 
-        osc.frequency.setValueAtTime(baseFreq, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(baseFreq + 200, ctx.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
-        osc.connect(gainNode); gainNode.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.3);
-    } catch (e) {}
+    playCorrectSound();
 }
-
 function showFloatingPoints(element, points) {
     const rect = element.getBoundingClientRect(); const pt = document.createElement('div');
     pt.className = 'floating-points'; pt.innerText = `+${points}`;
@@ -2346,22 +2349,20 @@ function handleVocabAnswer(btnEl, selectedOpt) {
     let isCorrect = selectedOpt === vCurrentQuestion.correct;
     const cardEl = document.getElementById('vocab-question-card');
 
-    // --- LẤY TỪ VỰNG HIỆN TẠI ĐỂ GHI SỔ ---
     let currentItem = vCurrentQuestion.item;
 
     if (isCorrect) { 
-        // BỔ SUNG: CỘNG ĐIỂM ĐÚNG
         currentItem.correctCount = (currentItem.correctCount || 0) + 1;
 
-        btnEl.classList.add('correct-btn'); 
+        if (btnEl) btnEl.classList.add('correct-btn'); 
         vStreak++; 
         if (vStreak > vMaxStreak) vMaxStreak = vStreak; 
 
-        // [MỚI] HỒI TIM: Đúng 3 câu liên tiếp (bội số của 3: 3, 6, 9...) và tim hiện tại < 5
-        if (vStreak % 3 === 0 && vLives < 5) {
+        // [ÁP DỤNG]: Đúng 5 câu liên tiếp mới được hồi 1 tim
+        if (vStreak % 5 === 0 && vLives < 5) {
             vLives++;
-            if (typeof showFloatingPoints === 'function') showFloatingPoints(btnEl, "+1 ❤️ Hồi máu");
-        } 
+            if (typeof showFloatingPoints === 'function' && btnEl) showFloatingPoints(btnEl, "+1 ❤️ Hồi máu");
+        }
         
         let pointsEarned = 10;
         if (vSettings.timer) {
@@ -2373,28 +2374,27 @@ function handleVocabAnswer(btnEl, selectedOpt) {
         vScore += pointsEarned; 
         
         if (vSettings.effects) {
-            if (typeof showFloatingPoints === 'function') showFloatingPoints(btnEl, pointsEarned);
+            if (typeof showFloatingPoints === 'function' && btnEl) showFloatingPoints(btnEl, pointsEarned);
+            if (typeof playCorrectSound === 'function') playCorrectSound(); 
             if (vStreak >= 3) {
-                if (typeof playComboSound === 'function') playComboSound(vStreak);
                 cardEl.classList.add('fever-mode');
                 if (vStreak % 5 === 0 && typeof triggerConfetti === 'function') triggerConfetti(); 
-            } else {
-                if (typeof playCorrectSound === 'function') playCorrectSound(); 
             }
         }
 
         updateVocabUI(); 
-        setTimeout(() => {
-            cardEl.classList.remove('fever-mode');
-            cardEl.classList.add('swipe-out');
-            setTimeout(generateVocabQuestion, 300);
-        }, 800); 
+        // Đã xóa hàm setTimeout ở đây để game không tự động lướt qua câu mới
     } 
     else { 
-        // BỔ SUNG: CỘNG ĐIỂM SAI
         currentItem.wrongCount = (currentItem.wrongCount || 0) + 1;
 
-        btnEl.classList.add('incorrect-btn'); 
+        if (btnEl) {
+            btnEl.classList.add('incorrect-btn'); 
+        } else {
+            const hintEl = document.getElementById('vocab-hint');
+            if (hintEl) { hintEl.innerText = "⏰ HẾT GIỜ!"; hintEl.style.color = "var(--danger)"; }
+        }
+
         document.querySelectorAll('#vocab-options-container .option-btn').forEach(b => { 
             if (b.innerText === vCurrentQuestion.correct) b.classList.add('correct-btn'); 
         }); 
@@ -2407,19 +2407,83 @@ function handleVocabAnswer(btnEl, selectedOpt) {
         vStreak = 0; vLives--; 
         cardEl.classList.remove('fever-mode'); 
         updateVocabUI(); 
-        showVocabExplanation(); 
     }
 
-    // BỔ SUNG: LƯU LẠI VÀO BỘ NHỚ
     currentItem.lastPlayed = Date.now();
     localStorage.setItem('myStudyData', JSON.stringify(db));
+    
+    // GỌI BẢNG GIẢI THÍCH (Bất kể đúng hay sai)
+    showVocabExplanation(isCorrect, btnEl === null);
 }
 
-function showVocabExplanation() {
-    const expDiv = document.getElementById('vocab-explanation'); const content = document.getElementById('vocab-explain-content'); let item = vCurrentQuestion.item;
-    if (item.type === 'structure') { content.innerHTML = `<p><strong>Cấu trúc:</strong> <span style="color:var(--primary); font-weight:bold; font-size:18px;">${item.en}</span></p><p><strong>Ý nghĩa:</strong> ${item.vi}</p>`; } 
-    else { content.innerHTML = `<p><strong>Từ vựng:</strong> <span style="color:var(--primary); font-weight:bold; font-size:18px;">${item.en}</span> <span style="color:var(--text-muted);">${item.pos}</span></p>${item.ipa ? `<p><strong>Phát âm:</strong> <span style="background:rgba(0,0,0,0.1); padding:2px 6px; border-radius:4px; font-family:monospace;">${item.ipa}</span></p>` : ''}<p><strong>Nghĩa:</strong> ${item.vi}</p>${item.syn ? `<p><strong>Đồng nghĩa:</strong> <span style="color:#10b981;">${item.syn}</span></p>` : ''}${item.ant ? `<p><strong>Trái nghĩa:</strong> <span style="color:#ef4444;">${item.ant}</span></p>` : ''}`; }
-    expDiv.classList.remove('hidden'); document.getElementById('vocab-next-btn').innerText = vLives <= 0 ? "Xem kết quả" : "Đã ghi nhớ, tiếp tục \u2192";
+function showVocabExplanation(isCorrect, isTimeout = false) {
+    const expDiv = document.getElementById('vocab-explanation'); 
+    const content = document.getElementById('vocab-explain-content'); 
+    let item = vCurrentQuestion.item;
+    
+    // Tùy chỉnh màu sắc dựa trên kết quả
+    let bgColor = isCorrect ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)";
+    let borderColor = isCorrect ? "var(--success)" : "var(--danger)";
+    let titleText = isCorrect ? "🎉 CHÍNH XÁC!" : (isTimeout ? "⏰ HẾT GIỜ!" : "❌ SAI RỒI!");
+    let titleColor = isCorrect ? "var(--success)" : "var(--danger)";
+
+    let html = `
+        <div style="font-size: 20px; font-weight: 900; color: ${titleColor}; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <span>${titleText}</span>
+        </div>
+    `;
+
+    if (item.type === 'structure') { 
+        html += `<p style="margin: 5px 0;"><strong>Cấu trúc:</strong> <span style="color:var(--primary); font-weight:bold; font-size:18px;">${item.en}</span></p>
+                 <p style="margin: 5px 0;"><strong>Ý nghĩa:</strong> ${item.vi}</p>`; 
+    } else { 
+        html += `<p style="margin: 5px 0; font-size: 18px;"><strong>${item.en}</strong> <span style="color:var(--text-muted); font-size: 14px;">${item.pos}</span></p>
+                 ${item.ipa ? `<p style="margin: 5px 0;"><strong>Phát âm:</strong> <span style="background:var(--card-bg-elevated); padding:2px 6px; border-radius:4px; font-family:monospace;">${item.ipa}</span></p>` : ''}
+                 <p style="margin: 5px 0; font-size: 16px;"><strong>Nghĩa:</strong> ${item.vi}</p>
+                 ${item.syn ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Đồng nghĩa:</strong> <span style="color:#10b981;">${item.syn}</span></p>` : ''}
+                 ${item.ant ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Trái nghĩa:</strong> <span style="color:#ef4444;">${item.ant}</span></p>` : ''}`; 
+    }
+    content.innerHTML = html;
+    
+    // Tiêm CSS động để tạo khung Popup nổi bật
+    expDiv.style.cssText = `
+        background: var(--card-bg);
+        border: 2px solid ${borderColor};
+        border-radius: 16px;
+        padding: 20px;
+        margin-top: 25px;
+        box-shadow: 0 10px 25px ${bgColor};
+        animation: fadeInUp 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    `;
+
+    // Lớp nền mờ bên trong thẻ
+    const bgOverlay = document.createElement('div');
+    bgOverlay.style.cssText = `position:absolute; top:0; left:0; width:100%; height:100%; background: ${bgColor}; z-index: 0; pointer-events: none;`;
+    content.style.position = 'relative';
+    content.style.zIndex = '1';
+    
+    const oldOverlay = expDiv.querySelector('.exp-bg-overlay');
+    if(oldOverlay) oldOverlay.remove();
+    bgOverlay.className = 'exp-bg-overlay';
+    expDiv.appendChild(bgOverlay);
+
+    expDiv.classList.remove('hidden'); 
+
+    // Biến hình nút Tiếp tục
+    const nextBtn = document.getElementById('vocab-next-btn');
+    nextBtn.innerText = vLives <= 0 ? "Xem kết quả" : "Tiếp tục \u2192";
+    nextBtn.style.cssText = `
+        background: ${borderColor}; 
+        color: #fff; 
+        border: none; 
+        position: relative; 
+        z-index: 1; 
+        margin-top: 15px; 
+        font-weight: bold;
+        box-shadow: 0 4px 15px ${bgColor};
+    `;
 }
 
 function nextVocabQuestion() {
