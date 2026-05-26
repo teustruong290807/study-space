@@ -1188,11 +1188,16 @@ function playCorrectSound() {
 function playErrorSound() {
     try {
         const ctx = getAudioCtx();
-        const osc = ctx.createOscillator(); const gainNode = ctx.createGain();
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.2);
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+        const osc = ctx.createOscillator(); 
+        const gainNode = ctx.createGain();
+        // Đổi sang sóng triangle và tần số cao hơn để dễ nghe trên loa điện thoại
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(300, ctx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0.2, ctx.currentTime); 
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
         osc.connect(gainNode); gainNode.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.2);
+        osc.start(); osc.stop(ctx.currentTime + 0.3);
     } catch (e) {}
 }
 
@@ -2420,12 +2425,22 @@ function generateVocabQuestion() {
 // 3. HÀM XỬ LÝ ĐÁP ÁN (Áp dụng Tùy chọn)
 // ==========================================
 function handleVocabAnswer(btnEl, selectedOpt) {
-    document.getElementById('vocab-options-container').style.pointerEvents = 'none';
+    const optsContainer = document.getElementById('vocab-options-container');
+    
+    // [ĐÃ FIX]: Ngăn chặn hack điểm bằng cách Spam phím Enter/Space
+    if (optsContainer.style.pointerEvents === 'none') return; 
+    optsContainer.style.pointerEvents = 'none';
+    
+    // Khóa tất cả các nút bấm và xóa vùng chọn (blur) để bàn phím không kích hoạt lại được
+    optsContainer.querySelectorAll('.option-btn').forEach(b => { 
+        b.disabled = true; 
+        b.blur(); 
+    });
+
     cancelAnimationFrame(vTimerAnimation);
     
     let isCorrect = selectedOpt === vCurrentQuestion.correct;
     const cardEl = document.getElementById('vocab-question-card');
-
     let currentItem = vCurrentQuestion.item;
 
     if (isCorrect) { 
@@ -2563,6 +2578,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
     const nextBtn = document.getElementById('vocab-next-btn');
     nextBtn.innerText = vLives <= 0 ? "XEM KẾT QUẢ" : "TIẾP TỤC";
     nextBtn.style.cssText = `
+        font-family: inherit; /* [ĐÃ FIX LỖI FONT CHỮ TIẾNG VIỆT] */
         background: ${borderColor}; 
         color: #fff; 
         border: none; 
@@ -2577,6 +2593,10 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         box-shadow: 0 4px 0 rgba(0,0,0,0.15);
         transition: transform 0.1s, box-shadow 0.1s;
     `;
+    
+    // [MỚI]: Tự động tập trung bàn phím vào nút Tiếp Tục
+    // Giúp bạn gõ Enter phát là qua luôn câu mới, cực kì liền mạch!
+    setTimeout(() => nextBtn.focus(), 100);
     
     // Hiệu ứng "Lún" khi chạm tay vào nút
     nextBtn.onmousedown = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
