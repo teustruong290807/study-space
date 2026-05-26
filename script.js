@@ -1045,7 +1045,7 @@ function renderQuestion() {
         }
         
         let practiceSelectedOpt = null; let practiceSelectedBtn = null;
-        let lastTapTime = 0; // Bộ đếm thời gian cho Double Tap
+        // Đã xóa lastTapTime để tránh xung đột khi gõ phím tắt nhanh
 
         displayOptions.forEach((opt, idx) => {
             const btn = document.createElement('button'); btn.className = 'option-btn';
@@ -1055,10 +1055,6 @@ function renderQuestion() {
             if (isTestMode && testAnswers[currentQuestionIndex] === opt) btn.classList.add('selected');
 
             btn.onclick = function() { 
-                const now = Date.now();
-                const isDoubleTap = (now - lastTapTime < 400); // Chạm lần 2 dưới 400ms là Double Tap
-                lastTapTime = now;
-
                 if (isTestMode) {
                     testAnswers[currentQuestionIndex] = opt;
                     optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
@@ -1066,8 +1062,8 @@ function renderQuestion() {
                 } else { 
                     if (!document.getElementById('next-btn').classList.contains('hidden')) return;
                     
-                    // LÔ-GÍC DOUBLE TAP
-                    if (this.classList.contains('selected') || isDoubleTap) {
+                    // LÔ-GÍC KÉP MỚI: Chỉ chốt khi bấm/gõ phím vào đúng nút ĐANG ĐƯỢC CHỌN
+                    if (this.classList.contains('selected')) {
                         const submitBtn = document.getElementById('normal-submit-btn');
                         if (submitBtn && !submitBtn.classList.contains('hidden')) submitBtn.click();
                         return;
