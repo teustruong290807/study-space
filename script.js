@@ -2104,23 +2104,28 @@ async function updateVocabRanking(topic, score, streak) {
 
 // 1. Mở màn hình Game: Nạp trạng thái đã lưu vào các nút gạt
 function openVocabGame() {
-    // [TỰ ĐỘNG DỌN RÁC] Xóa các từ vựng bị hỏng [object HTMLButtonElement] do dán nhầm trước đó
-    if (db.Vocabulary) {
-        db.Vocabulary = db.Vocabulary.filter(v => typeof v.en === 'string' && typeof v.vi === 'string' && !v.en.includes('[object') && !v.vi.includes('[object'));
+    // [TỰ ĐỘNG DỌN RÁC] Sửa lỗi văng game do từ vựng bị hỏng [object HTML...]
+    if (db && db.Vocabulary) {
+        db.Vocabulary = db.Vocabulary.filter(v => 
+            v && 
+            typeof v === 'object' && 
+            typeof v.en === 'string' && 
+            typeof v.vi === 'string' && 
+            !v.en.includes('[object') && 
+            !v.vi.includes('[object')
+        );
         localStorage.setItem('myStudyData', JSON.stringify(db));
     }
 
-    if (!db.Vocabulary || db.Vocabulary.length < 4) { 
+    if (!db || !db.Vocabulary || db.Vocabulary.length < 4) { 
         alert("⚠️ Kho từ vựng cần ít nhất 4 từ hợp lệ!"); return; 
     }
     showScreen('screen-vocab-game'); 
     document.getElementById('app-title').innerText = "Game Từ Vựng";
 
-    // Bật lại thanh Điều hướng khi đang ở sảnh chờ (Trừ khi bị khóa bằng Share Link)
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav && !isIsolatedMode) bottomNav.style.display = 'flex';
     
-    // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM (Dropdown chủ đề) ---
     const topics = [...new Set(db.Vocabulary.map(item => item.topic || 'Uncategorized'))];
     const select = document.getElementById('vocab-topic-select');
     if (select) {
@@ -2130,7 +2135,6 @@ function openVocabGame() {
     
     document.getElementById('vocab-total-words').innerText = db.Vocabulary.length;
     
-    // Hiển thị màn hình sảnh, giấu các màn hình khác
     document.getElementById('vocab-start-menu').classList.remove('hidden');
     document.getElementById('vocab-game-play-area').classList.add('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
@@ -2138,13 +2142,15 @@ function openVocabGame() {
 
 // 2. Bắt đầu Game: Đọc các nút gạt và áp dụng vào game
 function startVocabGame() {
-    const selectedTopic = document.getElementById('vocab-topic-select').value;
+    const selectEl = document.getElementById('vocab-topic-select');
+    const selectedTopic = selectEl ? selectEl.value : 'ALL';
     
-    // ĐỌC CÀI ĐẶT TỪ CÁC NÚT GẠT TRƯỚC KHI VÀO GAME
+    // [ĐÃ FIX] Tránh lỗi văng app khi không tìm thấy nút gạt (Cannot read properties of null)
     const ttsCheckbox = document.getElementById('start-set-tts');
     const timerCheckbox = document.getElementById('start-set-timer');
     const effectsCheckbox = document.getElementById('start-set-effects');
     
+    // Mặc kệ vạch đỏ của phần mềm (nếu có), trình duyệt vẫn hiểu và chạy đúng!
     vSettings.autoTTS = ttsCheckbox ? ttsCheckbox.checked : false;
     vSettings.timer = timerCheckbox ? timerCheckbox.checked : true;
     vSettings.effects = effectsCheckbox ? effectsCheckbox.checked : true;
@@ -2154,14 +2160,13 @@ function startVocabGame() {
     playingVocabPool = selectedTopic === 'ALL' ? db.Vocabulary : db.Vocabulary.filter(v => (v.topic || 'Chung') === selectedTopic);
     
     if (playingVocabPool.length < 4) { 
-        alert(`⚠️ Chủ đề này không đủ từ vựng!`); return; 
+        alert(`⚠️ Chủ đề này không đủ từ vựng hợp lệ!`); return; 
     }
 
     document.getElementById('vocab-start-menu').classList.add('hidden');
     document.getElementById('vocab-game-play-area').classList.remove('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
     
-    // Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
     const bottomNav = document.getElementById('bottom-nav');
     if (bottomNav) bottomNav.style.display = 'none';
 
@@ -2169,7 +2174,7 @@ function startVocabGame() {
     updateVocabUI();
     
     if (selectedTopic !== 'ALL') {
-        displayVocabRanking(selectedTopic);
+        if (typeof displayVocabRanking === 'function') displayVocabRanking(selectedTopic);
     } else {
         const rankingBox = document.getElementById('vocab-rankings');
         if (rankingBox) rankingBox.classList.add('hidden');
