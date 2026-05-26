@@ -2109,6 +2109,10 @@ function openVocabGame() {
     }
     showScreen('screen-vocab-game'); 
     document.getElementById('app-title').innerText = "Game Từ Vựng";
+
+    // [MỚI] Bật lại thanh Điều hướng khi đang ở sảnh chờ (Trừ khi đang bị khóa bằng Share Link)
+    const bottomNav = document.getElementById('bottom-nav');
+    if (bottomNav && !isIsolatedMode) bottomNav.style.display = 'flex';
     
     // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM ---
     const topics = [...new Set(db.Vocabulary.map(v => v.topic || 'Chung'))]; 
@@ -2130,9 +2134,16 @@ function openVocabGame() {
     select.innerHTML = '<option value="ALL">🌟 Trộn Tất cả từ vựng</option>'; 
     topics.forEach(t => { select.innerHTML += `<option value="${t}">📁 Chủ đề: ${t}</option>`; });
     
-    document.getElementById('vocab-start-menu').classList.remove('hidden'); 
-    document.getElementById('vocab-game-play-area').classList.add('hidden'); 
+    document.getElementById('vocab-start-menu').classList.add('hidden');
+    document.getElementById('vocab-game-play-area').classList.remove('hidden');
     document.getElementById('vocab-game-over').classList.add('hidden');
+    
+    // [MỚI] Tắt thanh Điều hướng dưới đáy để không bấm nhầm lúc chơi
+    const bottomNav = document.getElementById('bottom-nav');
+    if (bottomNav) bottomNav.style.display = 'none';
+
+    vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5; 
+    updateVocabUI();
 }
 
 // 2. Bắt đầu Game: Đọc các nút gạt và áp dụng vào game
@@ -2421,69 +2432,102 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
     const content = document.getElementById('vocab-explain-content'); 
     let item = vCurrentQuestion.item;
     
-    // Tùy chỉnh màu sắc dựa trên kết quả
-    let bgColor = isCorrect ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)";
-    let borderColor = isCorrect ? "var(--success)" : "var(--danger)";
-    let titleText = isCorrect ? "🎉 CHÍNH XÁC!" : (isTimeout ? "⏰ HẾT GIỜ!" : "❌ SAI RỒI!");
-    let titleColor = isCorrect ? "var(--success)" : "var(--danger)";
+    // Xóa màn hình đen mờ cũ (vì giờ ta không dùng Popup che giữa màn hình nữa)
+    const oldOverlay = document.getElementById('vocab-exp-overlay');
+    if (oldOverlay) oldOverlay.remove();
 
+    // Tùy chỉnh màu sắc chuẩn Duolingo
+    let bgColor = isCorrect ? "#d7ffb8" : "#ffdfe0"; // Xanh lá non / Đỏ nhạt
+    let borderColor = isCorrect ? "#58cc02" : "#ff4b4b"; // Xanh lá đậm / Đỏ đậm
+    let titleColor = isCorrect ? "#58cc02" : "#ea2b2b";
+    let titleText = isCorrect ? "Tuyệt vời!" : (isTimeout ? "Hết giờ!" : "Chưa chính xác!");
+    
+    // Icon tích V hoặc X trong vòng tròn trắng
+    let iconHtml = isCorrect 
+        ? `<div style="background: white; color: #58cc02; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">✓</div>` 
+        : `<div style="background: white; color: #ea2b2b; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">✗</div>`;
+
+    // Nội dung hiển thị (Ngắn gọn, súc tích hơn)
     let html = `
-        <div style="font-size: 20px; font-weight: 900; color: ${titleColor}; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-            <span>${titleText}</span>
+        <div style="font-size: 24px; font-weight: 900; color: ${titleColor}; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+            ${iconHtml} ${titleText}
         </div>
     `;
 
     if (item.type === 'structure') { 
-        html += `<p style="margin: 5px 0;"><strong>Cấu trúc:</strong> <span style="color:var(--primary); font-weight:bold; font-size:18px;">${item.en}</span></p>
-                 <p style="margin: 5px 0;"><strong>Ý nghĩa:</strong> ${item.vi}</p>`; 
+        html += `<p style="margin: 0 0 5px 0; font-size: 16px; color: #4b4b4b;"><strong>Cấu trúc:</strong> ${item.en}</p>
+                 <p style="margin: 0; font-size: 16px; color: #4b4b4b;"><strong>Nghĩa:</strong> ${item.vi}</p>`; 
     } else { 
-        html += `<p style="margin: 5px 0; font-size: 18px;"><strong>${item.en}</strong> <span style="color:var(--text-muted); font-size: 14px;">${item.pos}</span></p>
-                 ${item.ipa ? `<p style="margin: 5px 0;"><strong>Phát âm:</strong> <span style="background:var(--card-bg-elevated); padding:2px 6px; border-radius:4px; font-family:monospace;">${item.ipa}</span></p>` : ''}
-                 <p style="margin: 5px 0; font-size: 16px;"><strong>Nghĩa:</strong> ${item.vi}</p>
-                 ${item.syn ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Đồng nghĩa:</strong> <span style="color:#10b981;">${item.syn}</span></p>` : ''}
-                 ${item.ant ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Trái nghĩa:</strong> <span style="color:#ef4444;">${item.ant}</span></p>` : ''}`; 
+        html += `<p style="margin: 0 0 5px 0; font-size: 18px; color: #4b4b4b; font-weight: bold;">
+                    ${item.en} ${item.ipa ? `<span style="color: #777; font-size: 14px; font-weight: normal; font-family: monospace;">${item.ipa}</span>` : ''}
+                 </p>
+                 <p style="margin: 0; font-size: 16px; color: #4b4b4b;"><strong>Nghĩa:</strong> ${item.vi}</p>`; 
     }
     content.innerHTML = html;
     
-    // Tiêm CSS động để tạo khung Popup nổi bật
+    // MA THUẬT CSS: Cố định dưới đáy màn hình, hiệu ứng trượt mượt mà
     expDiv.style.cssText = `
-        background: var(--card-bg);
-        border: 2px solid ${borderColor};
-        border-radius: 16px;
-        padding: 20px;
-        margin-top: 25px;
-        box-shadow: 0 10px 25px ${bgColor};
-        animation: fadeInUp 0.3s ease;
-        position: relative;
-        overflow: hidden;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: 0 auto;
+        max-width: 600px; /* Khớp với giao diện điện thoại/Web thu nhỏ */
+        background: ${bgColor};
+        border-top: 2px solid ${borderColor};
+        padding: 20px 20px 30px 20px;
+        z-index: 999999;
+        display: flex;
+        flex-direction: column;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-sizing: border-box;
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
     `;
-
-    // Lớp nền mờ bên trong thẻ
-    const bgOverlay = document.createElement('div');
-    bgOverlay.style.cssText = `position:absolute; top:0; left:0; width:100%; height:100%; background: ${bgColor}; z-index: 0; pointer-events: none;`;
-    content.style.position = 'relative';
-    content.style.zIndex = '1';
     
-    const oldOverlay = expDiv.querySelector('.exp-bg-overlay');
-    if(oldOverlay) oldOverlay.remove();
-    bgOverlay.className = 'exp-bg-overlay';
-    expDiv.appendChild(bgOverlay);
-
     expDiv.classList.remove('hidden'); 
 
-    // Biến hình nút Tiếp tục
+    // Ép trình duyệt nhận diện trạng thái trước khi trượt lên
+    requestAnimationFrame(() => {
+        expDiv.style.transform = 'translateY(0)';
+    });
+
+    // Thiết kế nút "Tiếp tục" với hiệu ứng bấm lún xuống 3D 
     const nextBtn = document.getElementById('vocab-next-btn');
-    nextBtn.innerText = vLives <= 0 ? "Xem kết quả" : "Tiếp tục \u2192";
+    nextBtn.innerText = vLives <= 0 ? "XEM KẾT QUẢ" : "TIẾP TỤC";
     nextBtn.style.cssText = `
         background: ${borderColor}; 
         color: #fff; 
         border: none; 
-        position: relative; 
-        z-index: 1; 
-        margin-top: 15px; 
-        font-weight: bold;
-        box-shadow: 0 4px 15px ${bgColor};
+        width: 100%;
+        padding: 16px;
+        font-size: 18px;
+        border-radius: 16px;
+        margin-top: 20px; 
+        font-weight: 900;
+        cursor: pointer;
+        text-transform: uppercase;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+        transition: transform 0.1s, box-shadow 0.1s;
     `;
+    
+    // Hiệu ứng "Lún" khi chạm tay vào nút
+    nextBtn.onmousedown = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
+    nextBtn.onmouseup = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
+    nextBtn.onmouseleave = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
+    // Dành riêng cho màn hình cảm ứng điện thoại
+    nextBtn.ontouchstart = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
+    nextBtn.ontouchend = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
+
+    // Xử lý khi bấm Tiếp tục: Trượt xuống rồi mới next câu
+    nextBtn.onclick = () => {
+        expDiv.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+            expDiv.classList.add('hidden');
+            nextVocabQuestion();
+        }, 300); // Chờ 0.3s cho hoạt ảnh trượt xong
+    };
 }
 
 function nextVocabQuestion() {
