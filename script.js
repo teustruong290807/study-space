@@ -4353,8 +4353,8 @@ function showIsolatedVocabMenu(topic) {
         ${nameSectionHtml}
 
         <div style="display:flex; flex-direction:column; gap:12px;">
-            <button id="btn-flashcard-guest" class="btn btn-secondary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px; border-color: var(--primary); color: var(--primary); font-weight: bold;">📖 Ôn Tập Flashcard</button>
-            <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Bắt Đầu Chiến (Quiz Game)</button>
+            <button id="btn-flashcard-guest" class="btn btn-secondary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px; border-color: var(--primary); color: var(--primary); font-weight: bold;">📖 Flashcard</button>
+            <button id="btn-start-vocab-guest" class="btn btn-primary" style="width:100%; justify-content:center; padding: 15px; font-size: 16px;">🚀 Luyện tập</button>
         </div>
     `;
 
