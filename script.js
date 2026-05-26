@@ -272,12 +272,13 @@ function goHome() {
     let quizCount = 0;
     
     for (const subject in db) {
-    if (subject === "Vocabulary" || subject === "Documents") continue;
+    // [ĐÃ BỔ SUNG] Bỏ qua các mục hệ thống ngầm, không in ra màn hình Môn học
+    if (subject === "Vocabulary" || subject === "Documents" || subject === "TopicPasswords" || subject === "FocusMusic") continue;
 
-    // 🔒 Thêm dòng kiểm tra này:
+    // 🔒 Lính gác bảo vệ dữ liệu:
     if (!Array.isArray(db[subject])) {
         console.warn(`⚠️ Dữ liệu môn "${subject}" không đúng định dạng, bỏ qua.`);
-        continue; // Bỏ qua môn này nếu không phải mảng
+        continue; 
     }
 
     subjectCount++;
