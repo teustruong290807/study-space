@@ -2202,9 +2202,51 @@ function startVocabGame() {
 
 function initVocabGame() { startVocabGame(); }
 
+/* ==========================================
+   HÀM THOÁT GAME TỪ VỰNG (MỚI)
+========================================== */
+function exitVocabGame() {
+    if (confirm("Bạn có chắc chắn muốn thoát? Tiến trình của lượt chơi này sẽ bị hủy.")) {
+        if (typeof vTimerAnimation !== 'undefined') cancelAnimationFrame(vTimerAnimation);
+        
+        if (isIsolatedMode) {
+            // Nếu là học sinh truy cập qua Link Share -> Khóa cửa sổ
+            document.body.innerHTML = "<div style='display:flex; flex-direction:column; gap: 15px; height:100vh; align-items:center; justify-content:center; background:var(--bg-main); color:var(--primary); font-size:24px; font-weight:bold; text-align:center; padding: 20px;'>🎓<br>Dữ liệu đã được ghi nhận.<br>Em có thể đóng cửa sổ này!</div>";
+        } else {
+            // Bình thường -> Về sảnh từ vựng
+            openVocabGame(); 
+        }
+    }
+}
+
 function updateVocabUI() {
-    document.getElementById('vocab-score').innerText = vScore; document.getElementById('vocab-streak').innerText = vStreak;
-    let hearts = ""; for(let i=0; i<5; i++) hearts += i < vLives ? "❤️" : "🖤"; document.getElementById('vocab-lives').innerText = hearts;
+    const scoreEl = document.getElementById('vocab-score');
+    const streakEl = document.getElementById('vocab-streak');
+    const livesEl = document.getElementById('vocab-lives');
+    
+    if (scoreEl) scoreEl.innerText = vScore; 
+    if (streakEl) streakEl.innerText = vStreak;
+    if (livesEl) {
+        let hearts = ""; 
+        for(let i=0; i<5; i++) hearts += i < vLives ? "❤️" : "🖤"; 
+        livesEl.innerText = hearts;
+    }
+
+    // [MỚI] Tự động chèn nút Thoát vào giao diện Game nếu chưa có
+    let playArea = document.getElementById('vocab-game-play-area');
+    if (playArea && !document.getElementById('vocab-exit-btn')) {
+        const exitBtn = document.createElement('button');
+        exitBtn.id = 'vocab-exit-btn';
+        exitBtn.className = 'btn btn-secondary btn-sm';
+        exitBtn.innerHTML = '&#8592; Thoát Game';
+        exitBtn.style.cssText = 'margin-bottom: 15px; border-color: var(--danger); color: var(--danger); font-weight: bold; padding: 8px 15px; border-radius: 8px;';
+        exitBtn.onclick = exitVocabGame;
+        playArea.insertBefore(exitBtn, playArea.firstChild);
+    }
+
+    // [MỚI] Ép buộc tàng hình thanh Bottom Nav bằng !important để đánh bại CSS
+    const bottomNav = document.getElementById('bottom-nav');
+    if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
 }
 
 function getRandomItems(arr, count, excludeItem) { let filtered = arr.filter(item => item !== excludeItem); return filtered.sort(() => Math.random() - 0.5).slice(0, count); }
@@ -4873,7 +4915,10 @@ function openFlashcardMode() {
     // Đọc trạng thái cấu hình âm thanh TTS của người dùng từ giao diện
     const ttsCheckbox = document.getElementById('start-set-tts');
     vSettings.autoTTS = ttsCheckbox ? ttsCheckbox.checked : false;
-    
+   // [MỚI] ÉP TÀNG HÌNH THANH NAV LÚC HỌC FLASHCARD
+    const bottomNav = document.getElementById('bottom-nav');
+    if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
+
     // Xáo trộn ngẫu nhiên danh sách thẻ để tăng hiệu quả phản xạ học tập
     fcWords.sort(() => Math.random() - 0.5);
     fcCurrentIndex = 0;
@@ -5000,14 +5045,17 @@ function prevFlashcard() {
 function closeFlashcardMode() {
     const overlay = document.getElementById('flashcard-overlay');
     if (overlay) overlay.classList.add('hidden');
-    document.removeEventListener('keydown', handleFlashcardKeys); // Hủy lắng nghe phím tắt để tránh xung đột
-    window.speechSynthesis.cancel(); // Ngắt ngay lập tức giọng đọc đang phát
+    document.removeEventListener('keydown', handleFlashcardKeys); 
+    window.speechSynthesis.cancel(); 
 
-    // NÂNG CẤP: Nếu đang ở chế độ share link (cách ly), quay lại bảng chọn 2 Mode của chính bộ từ vựng đó
     if (isIsolatedMode) {
         const select = document.getElementById('vocab-topic-select');
         const currentTopic = select ? select.value : 'ALL';
         showIsolatedVocabMenu(currentTopic);
+    } else {
+        // Khôi phục lại thanh điều hướng nếu là user bình thường
+        const bottomNav = document.getElementById('bottom-nav');
+        if (bottomNav) bottomNav.style.display = 'flex';
     }
 }
 
