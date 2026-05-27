@@ -2602,7 +2602,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
         /* [ĐÃ FIX TRIỆT ĐỂ]: Độn móng siêu dày ít nhất 110px để đánh bại thanh URL Safari */
-        padding: 20px 20px calc(max(110px, 80px + env(safe-area-inset-bottom))) 20px;
+        padding: 20px 20px calc(30px + env(safe-area-inset-bottom)) 20px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
