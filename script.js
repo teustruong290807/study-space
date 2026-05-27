@@ -2591,40 +2591,39 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
 
     content.innerHTML = html;
     
-// MA THUẬT CSS: Tấm khiên "Bất tử" chống lại thanh công cụ Safari/Chrome
-    // MA THUẬT CSS: Kỹ thuật "Tràn viền" (Bleed Hack) trị dứt điểm mọi khoảng trắng trên Safari
+// MA THUẬT CSS: Tấm khiên "Bất tử" (Dùng translate3d và bỏ dìm móng)
     expDiv.style.cssText = `
         position: fixed;
-        /* [BƯỚC 1]: Dìm khối này chìm sâu xuống dưới đáy màn hình 100px */
-        bottom: -100px; 
+        bottom: 0;
         left: 0;
         right: 0;
         margin: 0 auto;
         max-width: 600px;
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
-        /* [BƯỚC 2]: Bù lại 100px đã dìm + 30px đệm tỷ lệ vàng mặc định = 130px */
-        padding: 20px 20px calc(130px + env(safe-area-inset-bottom)) 20px;
+        /* Đệm vừa đủ cho tai thỏ và thanh công cụ iOS */
+        padding: 20px 20px calc(25px + env(safe-area-inset-bottom, 0px)) 20px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
-        transform: translateY(100%);
+        transform: translate3d(0, 100%, 0);
         transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-sizing: border-box;
         border-radius: 24px 24px 0 0;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
     `;
     
     expDiv.classList.remove('hidden'); 
 
     requestAnimationFrame(() => {
-        expDiv.style.transform = 'translateY(0)';
+        expDiv.style.transform = 'translate3d(0, 0, 0)';
     });
 
-    // Nút "Tiếp tục" (Chuẩn hóa gọn gàng lại)
+    // Nút "Tiếp tục" - Thêm -webkit-appearance: none để diệt khung trắng Apple
     const nextBtn = document.getElementById('vocab-next-btn');
     nextBtn.innerText = vLives <= 0 ? "XEM KẾT QUẢ" : "TIẾP TỤC";
     nextBtn.style.cssText = `
+        -webkit-appearance: none;
         font-family: inherit; 
         background: ${borderColor}; 
         color: #fff; 
@@ -2640,9 +2639,11 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         box-shadow: 0 4px 0 rgba(0,0,0,0.15);
         transition: transform 0.1s, box-shadow 0.1s;
     `;
-    
-    // Tự động bắt Focus để gõ Enter qua bài nhanh
-    setTimeout(() => nextBtn.focus(), 100);
+
+    // Chỉ tự động Focus nếu không phải iPhone để tránh vệt trắng
+    if (window.innerWidth > 768) {
+        setTimeout(() => nextBtn.focus({ preventScroll: true }), 100);
+    }
     
     nextBtn.onmousedown = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
     nextBtn.onmouseup = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
