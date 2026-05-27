@@ -2591,7 +2591,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
 
     content.innerHTML = html;
     
-    // MA THUẬT CSS: Né tai thỏ iPhone và cố định đáy mượt mà
+// MA THUẬT CSS: Né tai thỏ iPhone (Đã độn thêm Fallback cứng 45px)
     expDiv.style.cssText = `
         position: fixed;
         bottom: 0;
@@ -2601,7 +2601,8 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         max-width: 600px;
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
-        padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px;
+        padding: 20px 20px 45px 20px; /* Kế hoạch B: Độn cứng 45px nếu iPhone bị lỗi */
+        padding-bottom: calc(30px + env(safe-area-inset-bottom)); /* Kế hoạch A: Tính theo chuẩn của Apple */
         z-index: 999999;
         display: flex;
         flex-direction: column;
@@ -2630,7 +2631,8 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         padding: 16px;
         font-size: 18px;
         border-radius: 16px;
-        margin-top: 10px; 
+        margin-top: 15px; 
+        margin-bottom: 10px; /* Đẩy thêm nút này lên 10px nữa cho chắc ăn */
         font-weight: 900;
         cursor: pointer;
         text-transform: uppercase;
