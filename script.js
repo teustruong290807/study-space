@@ -2592,17 +2592,19 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
     content.innerHTML = html;
     
 // MA THUẬT CSS: Tấm khiên "Bất tử" chống lại thanh công cụ Safari/Chrome
+    // MA THUẬT CSS: Kỹ thuật "Tràn viền" (Bleed Hack) trị dứt điểm mọi khoảng trắng trên Safari
     expDiv.style.cssText = `
         position: fixed;
-        bottom: 0;
+        /* [BƯỚC 1]: Dìm khối này chìm sâu xuống dưới đáy màn hình 100px */
+        bottom: -100px; 
         left: 0;
         right: 0;
         margin: 0 auto;
         max-width: 600px;
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
-        /* [ĐÃ FIX TRIỆT ĐỂ]: Độn móng siêu dày ít nhất 110px để đánh bại thanh URL Safari */
-        padding: 20px 20px calc(30px + env(safe-area-inset-bottom)) 20px;
+        /* [BƯỚC 2]: Bù lại 100px đã dìm + 30px đệm tỷ lệ vàng mặc định = 130px */
+        padding: 20px 20px calc(130px + env(safe-area-inset-bottom)) 20px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
@@ -2610,7 +2612,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-sizing: border-box;
         border-radius: 24px 24px 0 0;
-        box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
     `;
     
     expDiv.classList.remove('hidden'); 
