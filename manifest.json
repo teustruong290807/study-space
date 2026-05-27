@@ -2,7 +2,7 @@
   "name": "Game Từ Vựng Siêu Tốc",
   "short_name": "Từ Vựng",
   "description": "Ứng dụng luyện phản xạ từ vựng Tiếng Anh",
-  "start_url": "/?vocabTopic=ALL", 
+  "start_url": "./", 
   "display": "standalone",
   "background_color": "#FAFAFA",
   "theme_color": "#0A0A0A",
