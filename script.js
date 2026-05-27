@@ -2591,7 +2591,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
 
     content.innerHTML = html;
     
-// MA THUẬT CSS: Né tai thỏ iPhone (Đã độn thêm Fallback cứng 45px)
+// MA THUẬT CSS: Tấm khiên "Bất tử" chống lại thanh công cụ Safari/Chrome
     expDiv.style.cssText = `
         position: fixed;
         bottom: 0;
@@ -2601,8 +2601,8 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         max-width: 600px;
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
-        padding: 20px 20px 45px 20px; /* Kế hoạch B: Độn cứng 45px nếu iPhone bị lỗi */
-        padding-bottom: calc(30px + env(safe-area-inset-bottom)); /* Kế hoạch A: Tính theo chuẩn của Apple */
+        /* [ĐÃ FIX TRIỆT ĐỂ]: Độn móng siêu dày ít nhất 110px để đánh bại thanh URL Safari */
+        padding: 20px 20px calc(max(110px, 80px + env(safe-area-inset-bottom))) 20px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
@@ -2610,7 +2610,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-sizing: border-box;
         border-radius: 24px 24px 0 0;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
     `;
     
     expDiv.classList.remove('hidden'); 
@@ -2619,7 +2619,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         expDiv.style.transform = 'translateY(0)';
     });
 
-    // Nút "Tiếp tục" (Fix font chữ tiếng Việt)
+    // Nút "Tiếp tục" (Chuẩn hóa gọn gàng lại)
     const nextBtn = document.getElementById('vocab-next-btn');
     nextBtn.innerText = vLives <= 0 ? "XEM KẾT QUẢ" : "TIẾP TỤC";
     nextBtn.style.cssText = `
@@ -2632,7 +2632,6 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         font-size: 18px;
         border-radius: 16px;
         margin-top: 15px; 
-        margin-bottom: 10px; /* Đẩy thêm nút này lên 10px nữa cho chắc ăn */
         font-weight: 900;
         cursor: pointer;
         text-transform: uppercase;
