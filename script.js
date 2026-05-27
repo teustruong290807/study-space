@@ -1789,24 +1789,22 @@ function openVocabManage() {
 }
 
 function saveNewVocab() {
-    // --- 1. HỆ THỐNG KIỂM TRA AN NINH ---
+    // --- 1. HỆ THỐNG KIỂM TRA AN NINH MẬT KHẨU ---
     const topic = document.getElementById('vocab-topic-input').value.trim() || 'Chung';
     const passInput = document.getElementById('vocab-topic-pass') ? document.getElementById('vocab-topic-pass').value.trim() : '0';
     
     if (!db.TopicPasswords) db.TopicPasswords = {};
     
-    // Nếu chủ đề đã tồn tại và có pass (khác 0)
     if (db.TopicPasswords[topic] && db.TopicPasswords[topic] !== '0') {
         if (passInput !== db.TopicPasswords[topic]) {
-            alert(`❌ Bộ vocab "${topic}" là của người khác. Mật khẩu bạn nhập ở ô "Mật khẩu" không khớp!`);
-            return; // Chặn không cho lưu
+            alert(`❌ Bộ vocab "${topic}" là của người khác. Mật khẩu không khớp!`);
+            return;
         }
     } else {
-        // Nếu là chủ đề mới tinh -> Lưu mật khẩu mới tạo vào DB
         db.TopicPasswords[topic] = passInput || '0';
     }
 
-    // --- 2. XỬ LÝ LƯU TỪ VỰNG NHƯ BÌNH THƯỜNG ---
+    // --- 2. THU THẬP DỮ LIỆU TỪ FORM (CÓ GHI CHÚ MỚI) ---
     let level = document.getElementById('vocab-level-input').value;
     let type = document.getElementById('vocab-type-input').value;
     let en = document.getElementById('vocab-en-input').value.trim();
@@ -1815,10 +1813,11 @@ function saveNewVocab() {
     let pos = document.getElementById('vocab-pos-input').value.trim();
     let syn = document.getElementById('vocab-syn-input').value.split('|')[0]?.trim() || '';
     let ant = document.getElementById('vocab-syn-input').value.split('|')[1]?.trim() || '';
+    let note = document.getElementById('vocab-note-input') ? document.getElementById('vocab-note-input').value.trim() : ''; // [MỚI]
 
     if (!en || !vi) { alert("⚠️ Vui lòng nhập ít nhất Tiếng Anh và Tiếng Việt!"); return; }
 
-    // Đẩy từ vựng lên đầu danh sách
+    // Đẩy từ vựng kèm ghi chú lên đầu danh sách
     db.Vocabulary.unshift({ 
         id: Date.now().toString(),
         level: level === 'None' ? '' : level,
@@ -1830,34 +1829,30 @@ function saveNewVocab() {
         vi: vi, 
         syn: syn, 
         ant: ant,
+        note: note, // [MỚI THÊM THUỘC TÍNH NÀY]
         correctCount: 0, 
         wrongCount: 0,
         lastPlayed: Date.now()
     });
 
-    // Lưu dữ liệu vào máy (Lưu luôn cả TopicPasswords)
     localStorage.setItem('myStudyData', JSON.stringify(db));
 
-    // Reset các ô nhập liệu (Giữ lại chủ đề và pass để nhập tiếp cho lẹ)
+    // Xóa trắng form để người dùng nhập tiếp từ khác (Giữ lại chủ đề)
     document.getElementById('vocab-en-input').value = "";
     document.getElementById('vocab-vi-input').value = "";
     document.getElementById('vocab-ipa-input').value = "";
     document.getElementById('vocab-pos-input').value = "";
     document.getElementById('vocab-syn-input').value = "";
+    if (document.getElementById('vocab-note-input')) document.getElementById('vocab-note-input').value = ""; // [MỚI]
 
-    // Cập nhật giao diện
     if (typeof renderVocabList === 'function') renderVocabList();
-    if (typeof updateVocabBentoStats === 'function') updateVocabBentoStats();
     
-    // Thông báo nhẹ nhàng
+    // Hiệu ứng nút bấm thành công
     const btn = document.querySelector('button[onclick="saveNewVocab()"]');
     const oldText = btn.innerHTML;
     btn.innerHTML = "✅ Đã thêm vào kho!";
     btn.style.background = "var(--success)";
-    setTimeout(() => {
-        btn.innerHTML = oldText;
-        btn.style.background = "";
-    }, 1500);
+    setTimeout(() => { btn.innerHTML = oldText; btn.style.background = ""; }, 1500);
 }
 
 let draggedVocabIndex = -1;
@@ -1908,7 +1903,10 @@ function renderVocabList() {
         div.innerHTML = `<div style="display: flex; align-items: center;">${checkboxHTML}<div style="cursor: grab; margin-right: 15px; font-size: 20px; color: var(--text-muted);" title="Kéo thả để sắp xếp">☰</div>
         <div><strong style="color: var(--primary); font-size: 18px;">${item.en}</strong> <span style="font-size:13px; color:var(--text-muted); margin-left:5px;">${item.type === 'structure' ? '[Cấu trúc]' : item.pos + ' ' + item.ipa}</span>
         <span style="background:var(--primary); color:#fff; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; font-weight:bold;">${item.topic || 'Chung'}</span>
-        <div style="margin-top: 5px; font-size: 15px;">${item.vi}</div>${item.syn ? `<div style="font-size: 13px; color: #10b981; margin-top:3px;">Đồng nghĩa: ${item.syn}</div>` : ''}</div></div>
+        <div style="margin-top: 5px; font-size: 15px;">${item.vi}</div>
+        ${item.syn ? `<div style="font-size: 13px; color: #10b981; margin-top:3px;">Đồng nghĩa: ${item.syn}</div>` : ''}
+        ${item.note ? `<div style="font-size: 13px; color: #6b7280; margin-top:3px; font-style: italic;">💡 Ghi chú: ${item.note}</div>` : ''}
+        </div></div>
         <button class="btn btn-danger btn-sm" onclick="deleteVocab(${index})">Xóa</button>`;
         
         listDiv.appendChild(div);
@@ -1996,6 +1994,7 @@ function saveBulkVocab() {
         let ant = synAnt.split('|')[1]?.trim() || '';
         if(syn === '-') syn = '';
         if(ant === '-') ant = '';
+        let note = cols[8] && cols[8] !== '-' ? cols[8].trim() : '';
 
         db.Vocabulary.unshift({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Tạo ID duy nhất tránh trùng lặp
@@ -2513,51 +2512,96 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
     const content = document.getElementById('vocab-explain-content'); 
     let item = vCurrentQuestion.item;
     
-    // Xóa màn hình đen mờ cũ (vì giờ ta không dùng Popup che giữa màn hình nữa)
+    // Xóa màn hình đen mờ cũ
     const oldOverlay = document.getElementById('vocab-exp-overlay');
     if (oldOverlay) oldOverlay.remove();
 
     // Tùy chỉnh màu sắc chuẩn Duolingo
-    let bgColor = isCorrect ? "#d7ffb8" : "#ffdfe0"; // Xanh lá non / Đỏ nhạt
-    let borderColor = isCorrect ? "#58cc02" : "#ff4b4b"; // Xanh lá đậm / Đỏ đậm
+    let bgColor = isCorrect ? "#d7ffb8" : "#ffdfe0"; 
+    let borderColor = isCorrect ? "#58cc02" : "#ff4b4b"; 
     let titleColor = isCorrect ? "#58cc02" : "#ea2b2b";
     let titleText = isCorrect ? "Tuyệt vời!" : (isTimeout ? "Hết giờ!" : "Chưa chính xác!");
     
-    // Icon tích V hoặc X trong vòng tròn trắng
     let iconHtml = isCorrect 
         ? `<div style="background: white; color: #58cc02; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">✓</div>` 
         : `<div style="background: white; color: #ea2b2b; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">✗</div>`;
 
-    // Nội dung hiển thị (Ngắn gọn, súc tích hơn)
-    let html = `
-        <div style="font-size: 24px; font-weight: 900; color: ${titleColor}; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
-            ${iconHtml} ${titleText}
+    // --- 1. PHÂN TÍCH TỪ GỐC (Chuẩn Sư Phạm) ---
+    let ipaHtml = item.ipa ? `<span style="color: #666; font-size: 14px; font-weight: normal; font-family: monospace;">${item.ipa}</span>` : '';
+    let posHtml = item.pos ? `<span style="color: #0284c7; font-size: 14px; font-weight: bold;">${item.pos}</span>` : '';
+    let synHtml = item.syn && item.syn !== '-' ? `<div style="font-size: 13px; color: #047857; margin-top: 4px;"><strong>Đồng nghĩa:</strong> ${item.syn}</div>` : '';
+    let antHtml = item.ant && item.ant !== '-' ? `<div style="font-size: 13px; color: #be123c; margin-top: 4px;"><strong>Trái nghĩa:</strong> ${item.ant}</div>` : '';
+    // [MỚI]: Nếu có ghi chú, hiển thị một khối nghiêng mờ tinh tế phân tách bên dưới
+    let noteHtml = item.note ? `<div style="font-size: 13.5px; color: #555; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.08); font-style: italic; line-height: 1.4;">💡 <strong>Ghi chú giáo viên:</strong> ${item.note}</div>` : '';
+
+    let mainWordHtml = `
+        <div style="background: rgba(255,255,255,0.6); padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); margin-bottom: 10px; text-align: left;">
+            <div style="font-size: 18px; color: #1f2937; font-weight: 900; margin-bottom: 4px;">
+                ${item.en} ${posHtml} ${ipaHtml}
+            </div>
+            <div style="font-size: 15px; color: #374151;"><strong>Nghĩa:</strong> ${item.vi}</div>
+            ${synHtml}
+            ${antHtml}
+            ${noteHtml}
         </div>
     `;
 
-    if (item.type === 'structure') { 
-        html += `<p style="margin: 0 0 5px 0; font-size: 16px; color: #4b4b4b;"><strong>Cấu trúc:</strong> ${item.en}</p>
-                 <p style="margin: 0; font-size: 16px; color: #4b4b4b;"><strong>Nghĩa:</strong> ${item.vi}</p>`; 
-    } else { 
-        html += `<p style="margin: 0 0 5px 0; font-size: 18px; color: #4b4b4b; font-weight: bold;">
-                    ${item.en} ${item.ipa ? `<span style="color: #777; font-size: 14px; font-weight: normal; font-family: monospace;">${item.ipa}</span>` : ''}
-                 </p>
-                 <p style="margin: 0; font-size: 16px; color: #4b4b4b;"><strong>Nghĩa:</strong> ${item.vi}</p>`; 
+    // --- 2. GIẢI NGHĨA CÁC ĐÁP ÁN KHÁC TRONG CÂU ---
+    let optionsHtml = '';
+    const optionBtns = document.querySelectorAll('#vocab-options-container .option-btn');
+    
+    if (optionBtns.length > 0) {
+        optionsHtml += `<div style="font-size: 14px; font-weight: bold; color: ${titleColor}; margin-bottom: 8px; text-align: left;">💡 Phân tích đáp án:</div>`;
+        optionsHtml += `<div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 10px; text-align: left;">`;
+        
+        optionBtns.forEach(btn => {
+            let optText = btn.innerText.trim();
+            // Tự động quét Kho dữ liệu (db) để tra nghĩa của các đáp án nhiễu
+            let foundWord = db.Vocabulary.find(v => v.en === optText || v.vi === optText);
+            let wordEn = optText;
+            let wordVi = "???"; 
+
+            if (foundWord) {
+                wordEn = foundWord.en;
+                wordVi = foundWord.vi;
+            }
+
+            let isOptCorrect = optText === vCurrentQuestion.correct;
+            let iconOpt = isOptCorrect ? "✅" : "❌";
+            let colorOpt = isOptCorrect ? "#16a34a" : "#4b5563";
+            let boldOpt = isOptCorrect ? "font-weight: bold;" : "";
+            
+            optionsHtml += `<div style="color: ${colorOpt}; ${boldOpt}">
+                ${iconOpt} <strong>${wordEn}</strong>: ${wordVi}
+            </div>`;
+        });
+        optionsHtml += `</div>`;
     }
+
+    // --- 3. GỘP NỘI DUNG VÀO HTML CHÍNH ---
+    let html = `
+        <div style="font-size: 24px; font-weight: 900; color: ${titleColor}; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            ${iconHtml} ${titleText}
+        </div>
+        <div style="max-height: 40vh; overflow-y: auto; padding-right: 5px; margin-bottom: 10px;">
+            ${mainWordHtml}
+            ${optionsHtml}
+        </div>
+    `;
+
     content.innerHTML = html;
     
-    // MA THUẬT CSS: Cố định dưới đáy màn hình, hiệu ứng trượt mượt mà
+    // MA THUẬT CSS: Né tai thỏ iPhone và cố định đáy mượt mà
     expDiv.style.cssText = `
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         margin: 0 auto;
-        max-width: 600px; /* Khớp với giao diện điện thoại/Web thu nhỏ */
+        max-width: 600px;
         background: ${bgColor};
         border-top: 2px solid ${borderColor};
-        /* Bơm thêm đệm dưới đáy cho các dòng iPhone tai thỏ */
-        padding: 20px 20px calc(30px + env(safe-area-inset-bottom)) 20px;
+        padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
@@ -2570,16 +2614,15 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
     
     expDiv.classList.remove('hidden'); 
 
-    // Ép trình duyệt nhận diện trạng thái trước khi trượt lên
     requestAnimationFrame(() => {
         expDiv.style.transform = 'translateY(0)';
     });
 
-    // Thiết kế nút "Tiếp tục" với hiệu ứng bấm lún xuống 3D 
+    // Nút "Tiếp tục" (Fix font chữ tiếng Việt)
     const nextBtn = document.getElementById('vocab-next-btn');
     nextBtn.innerText = vLives <= 0 ? "XEM KẾT QUẢ" : "TIẾP TỤC";
     nextBtn.style.cssText = `
-        font-family: inherit; /* [ĐÃ FIX LỖI FONT CHỮ TIẾNG VIỆT] */
+        font-family: inherit; 
         background: ${borderColor}; 
         color: #fff; 
         border: none; 
@@ -2587,7 +2630,7 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         padding: 16px;
         font-size: 18px;
         border-radius: 16px;
-        margin-top: 20px; 
+        margin-top: 10px; 
         font-weight: 900;
         cursor: pointer;
         text-transform: uppercase;
@@ -2595,25 +2638,21 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         transition: transform 0.1s, box-shadow 0.1s;
     `;
     
-    // [MỚI]: Tự động tập trung bàn phím vào nút Tiếp Tục
-    // Giúp bạn gõ Enter phát là qua luôn câu mới, cực kì liền mạch!
+    // Tự động bắt Focus để gõ Enter qua bài nhanh
     setTimeout(() => nextBtn.focus(), 100);
     
-    // Hiệu ứng "Lún" khi chạm tay vào nút
     nextBtn.onmousedown = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
     nextBtn.onmouseup = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
     nextBtn.onmouseleave = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
-    // Dành riêng cho màn hình cảm ứng điện thoại
     nextBtn.ontouchstart = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
     nextBtn.ontouchend = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
 
-    // Xử lý khi bấm Tiếp tục: Trượt xuống rồi mới next câu
     nextBtn.onclick = () => {
         expDiv.style.transform = 'translateY(100%)';
         setTimeout(() => {
             expDiv.classList.add('hidden');
             nextVocabQuestion();
-        }, 300); // Chờ 0.3s cho hoạt ảnh trượt xong
+        }, 300); 
     };
 }
 
