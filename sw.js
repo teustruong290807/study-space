@@ -1,5 +1,5 @@
 // 🔴 QUAN TRỌNG: MỖI LẦN SỬA CODE, HÃY ĐỔI SỐ V1 THÀNH V2, V3... ĐỂ APP CẬP NHẬT
-const CACHE_NAME = 'study-space-v1'; 
+const CACHE_NAME = 'study-space-v2'; 
 
 const urlsToCache = [
   './',
