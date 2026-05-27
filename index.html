@@ -13,9 +13,20 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('sw.js').then(function(registration) {
-                    console.log('PWA đang hoạt động bình thường!');
-                }, function(err) {
-                    console.log('Lỗi đăng ký PWA: ', err);
+                    console.log('PWA đã sẵn sàng!');
+                    
+                    // Radar phát hiện bản cập nhật mới
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Hiện bảng thông báo cập nhật
+                                document.getElementById('update-toast').style.display = 'block';
+                            }
+                        });
+                    });
+                }).catch(function(err) {
+                    console.log('Lỗi PWA: ', err);
                 });
             });
         }
@@ -637,5 +648,11 @@
         </div>
     </div>
 </div>
+<div id="update-toast" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--card-bg); border: 2px solid var(--primary); padding: 20px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 9999999; text-align: center; width: 90%; max-width: 350px;">
+        <div style="font-size: 30px; margin-bottom: 10px;">🚀</div>
+        <div style="font-weight: 900; color: var(--primary); font-size: 18px; margin-bottom: 8px;">Đã có bản cập nhật mới!</div>
+        <div style="font-size: 14px; color: var(--text-main); margin-bottom: 15px; line-height: 1.4;">Hệ thống vừa được nâng cấp. Vui lòng tải lại để sử dụng tính năng mới nhất nhé!</div>
+        <button onclick="window.location.reload(true)" style="background: var(--primary); color: #fff; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 900; width: 100%; cursor: pointer; text-transform: uppercase; font-family: inherit;">Tải lại ngay</button>
+    </div>
 </body>
 </html>
