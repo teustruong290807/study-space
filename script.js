@@ -1990,12 +1990,10 @@ function saveBulkVocab() {
         let ipa = cols[5] === '-' ? '' : cols[5];
         let pos = cols[6] === '-' ? '' : cols[6];
         
-        let synAnt = cols[7] || '';
-        let syn = synAnt.split('|')[0]?.trim() || '';
-        let ant = synAnt.split('|')[1]?.trim() || '';
-        if(syn === '-') syn = '';
-        if(ant === '-') ant = '';
-        let note = cols[8] && cols[8] !== '-' ? cols[8].trim() : '';
+        // Đã tách riêng rẽ Đồng nghĩa (Cột 8), Trái nghĩa (Cột 9) và Ghi chú (Cột 10)
+        let syn = cols[7] && cols[7] !== '-' ? cols[7].trim() : '';
+        let ant = cols[8] && cols[8] !== '-' ? cols[8].trim() : '';
+        let note = cols[9] && cols[9] !== '-' ? cols[9].trim() : '';
 
         db.Vocabulary.unshift({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Tạo ID duy nhất tránh trùng lặp
