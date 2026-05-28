@@ -1811,8 +1811,8 @@ function saveNewVocab() {
     let vi = document.getElementById('vocab-vi-input').value.trim();
     let ipa = document.getElementById('vocab-ipa-input').value.trim();
     let pos = document.getElementById('vocab-pos-input').value.trim();
-    let syn = document.getElementById('vocab-syn-input').value.split('|')[0]?.trim() || '';
-    let ant = document.getElementById('vocab-syn-input').value.split('|')[1]?.trim() || '';
+    let syn = document.getElementById('vocab-syn-input').value.trim();
+    let ant = document.getElementById('vocab-ant-input') ? document.getElementById('vocab-ant-input').value.trim() : '';
     let note = document.getElementById('vocab-note-input') ? document.getElementById('vocab-note-input').value.trim() : ''; // [MỚI]
 
     if (!en || !vi) { alert("⚠️ Vui lòng nhập ít nhất Tiếng Anh và Tiếng Việt!"); return; }
@@ -1843,6 +1843,7 @@ function saveNewVocab() {
     document.getElementById('vocab-ipa-input').value = "";
     document.getElementById('vocab-pos-input').value = "";
     document.getElementById('vocab-syn-input').value = "";
+    if (document.getElementById('vocab-ant-input')) document.getElementById('vocab-ant-input').value = "";
     if (document.getElementById('vocab-note-input')) document.getElementById('vocab-note-input').value = ""; // [MỚI]
 
     if (typeof renderVocabList === 'function') renderVocabList();
