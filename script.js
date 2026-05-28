@@ -2338,7 +2338,8 @@ function generateVocabQuestion() {
     document.getElementById('vocab-options-container').style.pointerEvents = 'auto';
     
     let type, targetItem, questionText, correctAnswer, optionsArr, hint; let valid = false;
-    const words = playingVocabPool.filter(v => v.type === 'word' || !v.type); 
+    // [ĐÃ FIX]: Gom tất cả từ đơn, cụm từ (phrase) và collocations vào chung để tạo câu hỏi
+    const words = playingVocabPool.filter(v => v.type !== 'structure'); 
     const structures = playingVocabPool.filter(v => v.type === 'structure');
     const hasSyn = words.some(w => w.syn && w.syn !== '-'); 
     const hasAnt = words.some(w => w.ant && w.ant !== '-');
