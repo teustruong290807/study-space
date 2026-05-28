@@ -2361,8 +2361,26 @@ function generateVocabQuestion() {
             
             if (type === 'en_vi') { questionText = `Nghĩa của từ "${targetItem.en}" ${targetItem.pos} là gì?`; correctAnswer = targetItem.vi; optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.vi)]; hint = "TỪ VỰNG"; valid = true; } 
             else if (type === 'vi_en') { questionText = `Từ nào có nghĩa là: "${targetItem.vi}"?`; correctAnswer = targetItem.en; optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; hint = "TỪ VỰNG"; valid = true; } 
-            else if (type === 'synonym' && targetItem.syn) { questionText = `Từ nào ĐỒNG NGHĨA (Synonym) với "${targetItem.en}"?`; let syns = targetItem.syn.split(','); correctAnswer = syns[Math.floor(Math.random() * syns.length)].trim(); optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; hint = "ĐỒNG NGHĨA"; valid = true; } 
-            else if (type === 'antonym' && targetItem.ant) { questionText = `Từ nào TRÁI NGHĨA (Antonym) với "${targetItem.en}"?`; let ants = targetItem.ant.split(','); correctAnswer = ants[Math.floor(Math.random() * ants.length)].trim(); optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; hint = "TRÁI NGHĨA"; valid = true; }
+            else if (type === 'synonym' && targetItem.syn) { 
+                questionText = `Từ nào ĐỒNG NGHĨA (Synonym) với "${targetItem.en}"?`; 
+                let syns = targetItem.syn.split(','); 
+                let chosenSyn = syns[Math.floor(Math.random() * syns.length)].trim();
+                // [ĐÃ FIX]: Tách tiếng Anh làm đáp án, giữ tiếng Việt làm giải thích
+                correctAnswer = chosenSyn.includes(':') ? chosenSyn.split(':')[0].trim() : chosenSyn; 
+                targetItem.tempExtraVi = chosenSyn.includes(':') ? chosenSyn.split(':')[1].trim() : "???";
+                optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; 
+                hint = "ĐỒNG NGHĨA"; valid = true; 
+            } 
+            else if (type === 'antonym' && targetItem.ant) { 
+                questionText = `Từ nào TRÁI NGHĨA (Antonym) với "${targetItem.en}"?`; 
+                let ants = targetItem.ant.split(','); 
+                let chosenAnt = ants[Math.floor(Math.random() * ants.length)].trim();
+                // [ĐÃ FIX]: Tách tiếng Anh làm đáp án, giữ tiếng Việt làm giải thích
+                correctAnswer = chosenAnt.includes(':') ? chosenAnt.split(':')[0].trim() : chosenAnt; 
+                targetItem.tempExtraVi = chosenAnt.includes(':') ? chosenAnt.split(':')[1].trim() : "???";
+                optionsArr = [correctAnswer, ...getRandomItems(playingVocabPool, 3, targetItem).map(i => i.en)]; 
+                hint = "TRÁI NGHĨA"; valid = true; 
+            }
         }
     }
     vCurrentQuestion = { item: targetItem, type, correct: correctAnswer }; 
@@ -2566,17 +2584,23 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         
         optionBtns.forEach(btn => {
             let optText = btn.innerText.trim();
-            // Tự động quét Kho dữ liệu (db) để tra nghĩa của các đáp án nhiễu
-            let foundWord = db.Vocabulary.find(v => v.en === optText || v.vi === optText);
             let wordEn = optText;
             let wordVi = "???"; 
 
-            if (foundWord) {
-                wordEn = foundWord.en;
-                wordVi = foundWord.vi;
+            let isOptCorrect = optText === vCurrentQuestion.correct;
+
+            // [ĐÃ FIX]: Nếu là đáp án đúng của câu Đồng/Trái nghĩa, lấy nghĩa Tiếng Việt đã cắt lúc nãy ra dùng
+            if (isOptCorrect && (vCurrentQuestion.type === 'synonym' || vCurrentQuestion.type === 'antonym')) {
+                wordVi = item.tempExtraVi || "???";
+            } else {
+                // Tự động quét Kho dữ liệu (db) để tra nghĩa của các đáp án nhiễu
+                let foundWord = db.Vocabulary.find(v => v.en === optText || v.vi === optText);
+                if (foundWord) {
+                    wordEn = foundWord.en;
+                    wordVi = foundWord.vi;
+                }
             }
 
-            let isOptCorrect = optText === vCurrentQuestion.correct;
             let iconOpt = isOptCorrect ? "✅" : "❌";
             let colorOpt = isOptCorrect ? "#16a34a" : "#4b5563";
             let boldOpt = isOptCorrect ? "font-weight: bold;" : "";
