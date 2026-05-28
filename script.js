@@ -2131,7 +2131,7 @@ function openVocabGame() {
     if (appTitle) appTitle.innerText = "Game Từ Vựng";
 
     const bottomNav = document.getElementById('bottom-nav');
-    if (bottomNav && !isIsolatedMode) bottomNav.style.display = 'flex';
+    if (bottomNav && !isIsolatedMode) bottomNav.classList.remove('hide-nav');
     
     // --- LẤY LẠI SỐ LIỆU CHO Ô MÀU TÍM (Dropdown chủ đề) ---
     const topics = [...new Set(db.Vocabulary.map(item => item.topic || 'Uncategorized'))];
@@ -2189,7 +2189,7 @@ function startVocabGame() {
     document.getElementById('vocab-game-over').classList.add('hidden');
     
     const bottomNav = document.getElementById('bottom-nav');
-    if (bottomNav) bottomNav.style.display = 'none';
+    if (bottomNav) bottomNav.classList.add('hide-nav');
 
     vScore = 0; vStreak = 0; vMaxStreak = 0; vLives = 5; 
     updateVocabUI();
@@ -2249,8 +2249,9 @@ function updateVocabUI() {
     }
 
     // [MỚI] Ép buộc tàng hình thanh Bottom Nav bằng !important để đánh bại CSS
+    // Đã chuyển sang dùng class hide-nav cho mượt
     const bottomNav = document.getElementById('bottom-nav');
-    if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
+    if (bottomNav) bottomNav.classList.add('hide-nav');
 }
 
 function getRandomItems(arr, count, excludeItem) { let filtered = arr.filter(item => item !== excludeItem); return filtered.sort(() => Math.random() - 0.5).slice(0, count); }
@@ -4553,7 +4554,7 @@ function openVocabGameFromParams() {
     document.getElementById('app-sidebar').style.display = 'none';
     document.querySelector('.topbar').style.display = 'none';
     const bottomNav = document.getElementById('bottom-nav');
-    if(bottomNav) bottomNav.style.display = 'none';
+    if(bottomNav) bottomNav.classList.add('hide-nav');
     
     const dashboard = document.getElementById('app-dashboard');
     if(dashboard) {
@@ -5103,7 +5104,7 @@ function closeFlashcardMode() {
     } else {
         // Khôi phục lại thanh điều hướng nếu là user bình thường
         const bottomNav = document.getElementById('bottom-nav');
-        if (bottomNav) bottomNav.style.display = 'flex';
+        if (bottomNav) bottomNav.classList.remove('hide-nav');
     }
 }
 
