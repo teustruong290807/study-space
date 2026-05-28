@@ -2210,8 +2210,18 @@ function initVocabGame() { startVocabGame(); }
    HÀM THOÁT GAME TỪ VỰNG (MỚI)
 ========================================== */
 function exitVocabGame() {
-    if (confirm("Bạn có chắc chắn muốn thoát? Tiến trình của lượt chơi này sẽ bị hủy.")) {
+    if (confirm("Bạn có chắc chắn muốn dừng chơi? Điểm và kỷ lục hiện tại của bạn vẫn sẽ được lưu lại.")) {
         if (typeof vTimerAnimation !== 'undefined') cancelAnimationFrame(vTimerAnimation);
+        
+        // [MỚI] LƯU KỶ LỤC TRƯỚC KHI THOÁT
+        if (vScore > 0 || vMaxStreak > 0) {
+            if (currentVocabTopic !== 'ALL') updateVocabRanking(currentVocabTopic, vScore, vMaxStreak);
+            
+            let records = JSON.parse(localStorage.getItem('vocabRecords')) || { maxScore: 0, maxStreak: 0 };
+            if (vScore > records.maxScore) records.maxScore = vScore;
+            if (vMaxStreak > records.maxStreak) records.maxStreak = vMaxStreak;
+            localStorage.setItem('vocabRecords', JSON.stringify(records));
+        }
         
         if (isIsolatedMode) {
             // Nếu là học sinh truy cập qua Link Share -> Khóa cửa sổ
