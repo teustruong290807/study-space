@@ -2592,38 +2592,27 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
     content.innerHTML = html;
     
 // MA THUẬT CSS: Tấm khiên "Bất tử" (Dùng translate3d và bỏ dìm móng)
+    // ---- BẮT ĐẦU DÁN ĐÈ TỪ ĐÂY ĐẾN HẾT HÀM ----
+    
+    // ĐƯA VỀ GIAO DIỆN KHỐI BÌNH THƯỜNG (KHÔNG POPUP CỐ ĐỊNH NỮA)
     expDiv.style.cssText = `
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        margin: 0 auto;
-        max-width: 600px;
         background: ${bgColor};
-        border-top: 2px solid ${borderColor};
-        /* Đệm vừa đủ cho tai thỏ và thanh công cụ iOS */
-        padding: 20px 20px calc(25px + env(safe-area-inset-bottom, 0px)) 20px;
-        z-index: 999999;
+        border: 2px solid ${borderColor};
+        padding: 20px;
+        border-radius: 20px;
+        margin-top: 20px;
         display: flex;
         flex-direction: column;
-        transform: translate3d(0, 100%, 0);
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-sizing: border-box;
-        border-radius: 24px 24px 0 0;
-        box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        animation: fadeInUp 0.4s ease;
     `;
     
     expDiv.classList.remove('hidden'); 
 
-    requestAnimationFrame(() => {
-        expDiv.style.transform = 'translate3d(0, 0, 0)';
-    });
-
-    // Nút "Tiếp tục" - Thêm -webkit-appearance: none để diệt khung trắng Apple
+    // Nút "Tiếp tục" tối giản, không hack CSS
     const nextBtn = document.getElementById('vocab-next-btn');
     nextBtn.innerText = vLives <= 0 ? "XEM KẾT QUẢ" : "TIẾP TỤC";
     nextBtn.style.cssText = `
-        -webkit-appearance: none;
         font-family: inherit; 
         background: ${borderColor}; 
         color: #fff; 
@@ -2636,29 +2625,24 @@ function showVocabExplanation(isCorrect, isTimeout = false) {
         font-weight: 900;
         cursor: pointer;
         text-transform: uppercase;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.15);
-        transition: transform 0.1s, box-shadow 0.1s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     `;
 
-    // Chỉ tự động Focus nếu không phải iPhone để tránh vệt trắng
-    if (window.innerWidth > 768) {
-        setTimeout(() => nextBtn.focus({ preventScroll: true }), 100);
-    }
-    
-    nextBtn.onmousedown = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
-    nextBtn.onmouseup = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
-    nextBtn.onmouseleave = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
-    nextBtn.ontouchstart = () => { nextBtn.style.transform = 'translateY(4px)'; nextBtn.style.boxShadow = 'none'; };
-    nextBtn.ontouchend = () => { nextBtn.style.transform = 'none'; nextBtn.style.boxShadow = '0 4px 0 rgba(0,0,0,0.15)'; };
+    // Tự động cuộn màn hình xuống một chút để học sinh thấy giải thích
+    setTimeout(() => {
+        expDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (window.innerWidth > 768) {
+            nextBtn.focus({ preventScroll: true });
+        }
+    }, 100);
 
+    // Chuyển câu lập tức, không cần chờ hiệu ứng lướt xuống nữa
     nextBtn.onclick = () => {
-        expDiv.style.transform = 'translateY(100%)';
-        setTimeout(() => {
-            expDiv.classList.add('hidden');
-            nextVocabQuestion();
-        }, 300); 
+        expDiv.classList.add('hidden');
+        nextVocabQuestion();
     };
 }
+// ---- KẾT THÚC HÀM TẠI ĐÂY ----
 
 function nextVocabQuestion() {
     if (vLives <= 0) {
