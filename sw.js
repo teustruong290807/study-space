@@ -1,5 +1,5 @@
 // ĐÃ LÊN V3 - Bản vá lỗi không bị sập nếu thiếu file ảnh
-const CACHE_NAME = 'study-space-v5'; 
+const CACHE_NAME = 'study-space-v6'; 
 
 const urlsToCache = [
   './',
