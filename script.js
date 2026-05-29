@@ -2,29 +2,30 @@ const defaultData = {
     "Toán": [], "Tiếng Anh": [], "Công nghệ": [], "Sinh học": [], "Vocabulary": [], "Documents": {}
 };
 
-let localData = JSON.parse(localStorage.getItem('myStudyData'));
-let db = (localData && Object.keys(localData).length > 0) ? localData : defaultData;
+// ĐÃ ĐỔI TẤT CẢ THÀNH VAR ĐỂ CỨU IPHONE KHỎI LỖI TRẮNG TRANG
+var localData = JSON.parse(localStorage.getItem('myStudyData'));
+var db = (localData && Object.keys(localData).length > 0) ? localData : defaultData;
 if (!db.Vocabulary) db.Vocabulary = [];
 if (!db.Documents) db.Documents = {};
 
-let currentSubject = "";
-let currentQuizIndex = -1;
-let currentQuizQuestions = [];
-let currentQuestionIndex = 0;
-let editingQuizIndex = -1;
+var currentSubject = "";
+var currentQuizIndex = -1;
+var currentQuizQuestions = [];
+var currentQuestionIndex = 0;
+var editingQuizIndex = -1;
 
-let sessionCorrectCount = 0;
-let sessionResultList = []; 
-let hasAnsweredCurrent = false;
+var sessionCorrectCount = 0;
+var sessionResultList = []; 
+var hasAnsweredCurrent = false;
 
-let isTestMode = false;
-let isIsolatedMode = false; // Khóa học sinh trong 1 bài duy nhất
-let testAnswers = []; 
-let clusterSelections = []; 
-let focusedOptionBtn = null; 
+var isTestMode = false;
+var isIsolatedMode = false; // Khóa học sinh trong 1 bài duy nhất
+var testAnswers = []; 
+var clusterSelections = []; 
+var focusedOptionBtn = null; 
 
-let quizTimerInterval = null;
-let remainingSeconds = 0;
+var quizTimerInterval = null;
+var remainingSeconds = 0;
 
 const IMGBB_API_KEY = '1a44a672e09fd4613cac5a56ec4183ac'; 
 
