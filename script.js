@@ -826,9 +826,6 @@ function exitQuiz() {
 /* ==========================================
    6. HIỂN THỊ CÂU HỎI (CÓ NÚT BỎ QUA VÀ HIỆN GIẢI THÍCH)
 ========================================== */
-/* ==========================================
-   6. HIỂN THỊ CÂU HỎI (CÓ NÚT BỎ QUA VÀ HIỆN GIẢI THÍCH)
-========================================== */
 function renderQuestion() {
     if (!isTestMode && currentQuestionIndex >= currentQuizQuestions.length) { showResults(); return; }
 
@@ -1006,10 +1003,7 @@ function renderQuestion() {
                 document.getElementById('feedback').innerText = "Đã lưu bài viết. Hệ thống sẽ ghi nhận và gửi Giáo viên chấm điểm sau.";
                 document.getElementById('feedback').style.color = "var(--primary)";
                 const expBox = document.getElementById('practice-exp-box');
-                if (expBox) {
-                    expBox.classList.add('show');
-                    setTimeout(() => expBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
-                }
+                if (expBox) { expBox.classList.add('show'); setTimeout(() => expBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150); }
             };
             actionWrapper.appendChild(skipBtn);
             actionWrapper.appendChild(submitBtn);
@@ -1102,7 +1096,7 @@ function renderQuestion() {
             submitBtn.id = 'cluster-submit-btn'; 
             submitBtn.className = 'btn btn-primary'; 
             submitBtn.style.flex = '2'; 
-            submitBtn.innerText = 'Chốt đáp án bảng (Phím Enter)'; 
+            submitBtn.innerText = 'Chốt đáp án (Phím Enter)'; 
             submitBtn.onclick = submitClusterAnswer; 
 
             actionWrapper.appendChild(skipBtn);
@@ -1186,12 +1180,21 @@ function renderQuestion() {
         }
     }
 
-    // Gắn sẵn hộp Giải thích (Đã cấu hình chữ bọc thép cho Dark Mode)
+    // TẠO HỘP GIẢI THÍCH CHI TIẾT (IN RÕ ĐÁP ÁN ĐÚNG LÀ GÌ)
     if (!isTestMode) {
         const expBox = document.createElement('div');
         expBox.id = 'practice-exp-box';
         expBox.className = 'practice-explanation-box';
         
+        let correctInfo = "";
+        if (q.type === 'normal' || q.type === 'short-answer') {
+            correctInfo = `<div style="margin-bottom: 12px; color: var(--success); font-weight: bold; font-size: 16px;">🎯 Đáp án đúng: ${cleanOpt(q.correctAnswer)}</div>`;
+        } else if (q.type === 'cluster-tf') {
+            correctInfo = `<div style="margin-bottom: 12px; color: var(--success); font-weight: bold; font-size: 16px;">🎯 Đáp án đúng: `;
+            q.statements.forEach((st, i) => { correctInfo += `(${labelsTF[i]}) ${st.correctAnswer} &nbsp; `; });
+            correctInfo += `</div>`;
+        }
+
         let expContent = q.explanation ? formatText(q.explanation) : "Không có giải thích chi tiết cho câu hỏi này.";
         if (q.type === 'reading-cluster') {
             let subExp = "";
@@ -1201,7 +1204,7 @@ function renderQuestion() {
             if (subExp) expContent = subExp;
         }
 
-        expBox.innerHTML = `<strong style="color: var(--primary);">💡 Giải thích:</strong><div style="margin-top: 8px; color: var(--text-main);">${expContent}</div>`;
+        expBox.innerHTML = `${correctInfo}<strong style="color: var(--primary);">💡 Giải thích chi tiết:</strong><div style="margin-top: 8px; color: var(--text-main);">${expContent}</div>`;
         
         const nextWrapper = document.createElement('div');
         nextWrapper.style.cssText = 'margin-top: 15px; text-align: right;';
@@ -1264,16 +1267,12 @@ function isQuestionAnswered(idx) {
 }
 
 /* ==========================================================
-   TÍNH NĂNG BỎ QUA CÂU HỎI (SKIP) DÀNH CHO LUYỆN TẬP
-========================================================== */
-/* ==========================================================
-   TÍNH NĂNG BỎ QUA CÂU HỎI (SKIP) DÀNH CHO LUYỆN TẬP
+   TÍNH NĂNG BỎ QUA CÂU HỎI (SKIP) - KHÔNG TÔ XANH NÚT
 ========================================================== */
 function skipPracticeQuestion(type) {
     const q = currentQuizQuestions[currentQuestionIndex];
     const feedback = document.getElementById('feedback');
     
-    // 1. Âm thầm ghi vào sổ điểm là SAI (isCorrect: false)
     let alreadyAnswered = sessionResultList.some(res => res.questionNum === currentQuestionIndex + 1);
     if (!alreadyAnswered) {
         if (type === 'normal') {
@@ -1293,14 +1292,9 @@ function skipPracticeQuestion(type) {
         }
     }
 
-    // 2. Khóa toàn bộ nút bấm và HIỆN XANH LÁ đáp án đúng để học sinh học thuộc
+    // Chỉ khóa nút, KHÔNG TÔ XANH NÚT NÀO CẢ ĐỂ TRÁNH HIỂU LẦM
     if (type === 'normal') {
-        const options = document.querySelectorAll('.option-btn');
-        options.forEach(btn => {
-            btn.disabled = true;
-            btn.classList.remove('selected'); 
-            if (cleanOpt(btn.innerText) === cleanOpt(q.correctAnswer)) btn.classList.add('correct-btn');
-        });
+        document.querySelectorAll('.option-btn').forEach(btn => { btn.disabled = true; btn.classList.remove('selected'); });
     } else if (type === 'cluster-tf') {
         q.statements.forEach((stmt, i) => {
             const row = document.getElementById(`tf-row-${i}`);
@@ -1308,8 +1302,6 @@ function skipPracticeQuestion(type) {
                 const btnTrue = row.querySelector('.btn-true'); const btnFalse = row.querySelector('.btn-false');
                 if(btnTrue) { btnTrue.disabled = true; btnTrue.classList.remove('selected'); }
                 if(btnFalse) { btnFalse.disabled = true; btnFalse.classList.remove('selected'); }
-                const correctBtn = stmt.correctAnswer === "Đúng" ? btnTrue : btnFalse;
-                if(correctBtn) { correctBtn.classList.remove('incorrect-btn'); correctBtn.classList.add('correct-btn'); }
             }
         });
     } else if (type === 'reading-cluster') {
@@ -1319,28 +1311,19 @@ function skipPracticeQuestion(type) {
             if (subQ.type === 'writing') { 
                 const ta = block.querySelector('textarea'); if (ta) ta.disabled = true; 
             } else {
-                let correctAnsStrip = cleanOpt(subQ.correctAnswer);
-                block.querySelectorAll('.sub-option-btn').forEach(b => {
-                    b.disabled = true;
-                    b.classList.remove('selected'); 
-                    if (cleanOpt(b.innerText) === correctAnsStrip) { b.classList.remove('incorrect-btn'); b.classList.add('correct-btn'); }
-                });
+                block.querySelectorAll('.sub-option-btn').forEach(b => { b.disabled = true; b.classList.remove('selected'); });
             }
         });
     } else if (type === 'short-answer') {
         const inputEl = document.getElementById('short-answer-input');
-        inputEl.value = q.correctAnswer;
-        inputEl.style.borderColor = "var(--success)"; inputEl.style.color = "var(--success)"; inputEl.style.backgroundColor = "rgba(16, 185, 129, 0.05)"; inputEl.disabled = true;
+        inputEl.disabled = true;
     } else if (type === 'writing') {
-        const textareas = document.querySelectorAll('.writing-textarea');
-        textareas.forEach(ta => ta.disabled = true);
+        document.querySelectorAll('.writing-textarea').forEach(ta => ta.disabled = true);
     }
 
-    // 3. THÔNG BÁO CHỮ ĐỎ ĐỂ HỌC SINH KHÔNG HIỂU LẦM
-    feedback.innerHTML = "<strong>❌ ĐÃ BỎ QUA!</strong> (Hệ thống tính là Sai). Đáp án đúng được bôi xanh bên trên."; 
-    feedback.style.color = "var(--danger)";
+    feedback.innerHTML = "<strong>⏭ ĐÃ BỎ QUA!</strong> Hệ thống tính là sai câu này."; 
+    feedback.style.color = "var(--text-muted)";
     
-    // 4. Ẩn thanh chốt đáp án, hiện Giải thích
     document.querySelectorAll('.practice-action-wrapper').forEach(w => w.classList.add('hidden'));
     document.getElementById('next-btn').classList.remove('hidden');
     const expBox = document.getElementById('practice-exp-box');
@@ -1359,7 +1342,7 @@ function selectReadingAnswer(qIdx, selectedOpt, btnEl) {
 }
 
 /* ==========================================================
-   BỘ 4 HÀM CHẤM ĐIỂM (CÓ HIỆN GIẢI THÍCH KHI ĐÚNG / BỎ QUA)
+   BỘ 4 HÀM CHẤM ĐIỂM (CÓ HIỆN GIẢI THÍCH VÀ FIX LỖI TỊT MÀU)
 ========================================================== */
 function selectClusterAnswer(index, value) {
     if (!document.getElementById('next-btn').classList.contains('hidden')) return; 
@@ -1390,7 +1373,9 @@ function checkAnswer(btnElement, selected, correct) {
     if (isC) {
         playCorrectSound();
         btnElement.classList.remove('selected'); 
-        btnElement.classList.add('correct-btn'); 
+        // ÉP CHẾT MÀU XANH LÁ CÂY VÀO TRONG HTML (Đánh bật mọi lỗi CSS)
+        btnElement.style.cssText = "background-color: rgba(34, 197, 94, 0.15) !important; border-color: var(--success) !important; color: var(--success) !important;";
+        
         feedback.innerText = "✅ Chính xác! Tuyệt vời!"; feedback.style.color = "var(--success)";
         document.getElementById('next-btn').classList.remove('hidden');
         document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
@@ -1403,12 +1388,16 @@ function checkAnswer(btnElement, selected, correct) {
         }
     } else {
         feedback.innerText = "❌ Sai rồi! Hãy thử lại đáp án khác hoặc Bỏ qua."; feedback.style.color = "var(--danger)";
+        
+        // Rung đỏ và trả lại nguyên trạng để học sinh bấm tiếp
+        btnElement.style.cssText = "background-color: rgba(239, 68, 68, 0.15) !important; border-color: var(--danger) !important; color: var(--danger) !important;";
         btnElement.classList.add('incorrect-btn');
-        setTimeout(() => { btnElement.classList.remove('incorrect-btn'); }, 800);
-        // FIX: Đảm bảo học sinh bấm lại thoải mái
-        document.querySelectorAll('.option-btn').forEach(b => {
-            b.disabled = false;
-        });
+        setTimeout(() => { 
+            btnElement.classList.remove('incorrect-btn'); 
+            btnElement.style.cssText = ""; // Xóa màu đỏ đi
+        }, 800);
+        
+        document.querySelectorAll('.option-btn').forEach(b => b.disabled = false);
     }
 }
 
@@ -1447,7 +1436,10 @@ function submitClusterAnswer() {
                 const btnTrue = row.querySelector('.btn-true'); const btnFalse = row.querySelector('.btn-false');
                 if(btnTrue) btnTrue.disabled = true; if(btnFalse) btnFalse.disabled = true;
                 const selectedBtn = clusterSelections[i] === "Đúng" ? btnTrue : btnFalse;
-                if(selectedBtn) { selectedBtn.classList.remove('selected', 'incorrect-btn'); selectedBtn.classList.add('correct-btn'); }
+                if(selectedBtn) { 
+                    selectedBtn.classList.remove('selected', 'incorrect-btn'); 
+                    selectedBtn.style.cssText = "background-color: rgba(34, 197, 94, 0.15) !important; border-color: var(--success) !important; color: var(--success) !important;";
+                }
             }
         });
         feedback.innerText = "✅ Tuyệt vời! Bạn phân tích đúng toàn bộ các mệnh đề."; feedback.style.color = "var(--success)";
@@ -1463,21 +1455,30 @@ function submitClusterAnswer() {
             const row = document.getElementById(`tf-row-${i}`);
             if(row) {
                 const btnTrue = row.querySelector('.btn-true'); const btnFalse = row.querySelector('.btn-false');
-                if(btnTrue) btnTrue.classList.remove('incorrect-btn'); if(btnFalse) btnFalse.classList.remove('incorrect-btn');
+                if(btnTrue) { btnTrue.classList.remove('incorrect-btn'); btnTrue.style.cssText = ""; }
+                if(btnFalse) { btnFalse.classList.remove('incorrect-btn'); btnFalse.style.cssText = ""; }
+                
                 let uAns = clusterSelections[i] ? clusterSelections[i].toString().trim().toLowerCase() : "";
                 let cAns = stmt.correctAnswer ? stmt.correctAnswer.toString().trim().toLowerCase() : "";
+                
                 if (uAns !== cAns) {
                     const wrongBtn = clusterSelections[i] === "Đúng" ? btnTrue : btnFalse;
-                    if(wrongBtn) { wrongBtn.classList.add('incorrect-btn'); setTimeout(() => wrongBtn.classList.remove('incorrect-btn'), 800); }
+                    if(wrongBtn) { 
+                        wrongBtn.style.cssText = "background-color: rgba(239, 68, 68, 0.15) !important; border-color: var(--danger) !important; color: var(--danger) !important;";
+                        wrongBtn.classList.add('incorrect-btn'); 
+                        setTimeout(() => { wrongBtn.classList.remove('incorrect-btn'); wrongBtn.style.cssText = ""; }, 800); 
+                    }
                     clusterSelections[i] = null; // Bắt chọn lại
                     if(btnTrue) btnTrue.classList.remove('selected');
                     if(btnFalse) btnFalse.classList.remove('selected');
                 } else {
-                    // Câu nào đúng thì khóa xanh lá lại cho đỡ rối
                     if(btnTrue) btnTrue.disabled = true;
                     if(btnFalse) btnFalse.disabled = true;
                     const correctBtn = clusterSelections[i] === "Đúng" ? btnTrue : btnFalse;
-                    if(correctBtn) { correctBtn.classList.remove('selected'); correctBtn.classList.add('correct-btn'); }
+                    if(correctBtn) { 
+                        correctBtn.classList.remove('selected'); 
+                        correctBtn.style.cssText = "background-color: rgba(34, 197, 94, 0.15) !important; border-color: var(--success) !important; color: var(--success) !important;"; 
+                    }
                 }
             }
         });
@@ -1525,7 +1526,9 @@ function submitReadingCluster() {
                     b.disabled = true;
                     b.classList.remove('selected'); 
                     let btnContentOnly = cleanOpt(b.innerText);
-                    if (btnContentOnly === correctAnsStrip) { b.classList.add('correct-btn'); } 
+                    if (btnContentOnly === correctAnsStrip) { 
+                        b.style.cssText = "background-color: rgba(34, 197, 94, 0.15) !important; border-color: var(--success) !important; color: var(--success) !important;"; 
+                    } 
                 });
             }
         });
@@ -1544,23 +1547,22 @@ function submitReadingCluster() {
                 const block = document.getElementById(`sub-q-${i}`);
                 
                 if (userAnsStrip !== correctAnsStrip) {
-                    // CÂU SAI: Rung đỏ, xóa chọn và MỞ LẠI nút để học sinh chọn thoải mái
                     block.querySelectorAll('.sub-option-btn').forEach(b => {
-                        b.disabled = false; // MỞ KHÓA HOÀN TOÀN
+                        b.disabled = false; // MỞ KHÓA
                         if (cleanOpt(b.innerText) === userAnsStrip) { 
                             b.classList.remove('selected');
+                            b.style.cssText = "background-color: rgba(239, 68, 68, 0.15) !important; border-color: var(--danger) !important; color: var(--danger) !important;";
                             b.classList.add('incorrect-btn'); 
-                            setTimeout(() => b.classList.remove('incorrect-btn'), 800); 
+                            setTimeout(() => { b.classList.remove('incorrect-btn'); b.style.cssText = ""; }, 800); 
                         }
                     });
-                    clusterSelections[i] = null; // Bắt buộc phải chọn lại
+                    clusterSelections[i] = null; 
                 } else {
-                    // CÂU ĐÚNG: Khóa màu xanh lá cho câu nhỏ này để học sinh không cần chọn lại
                     block.querySelectorAll('.sub-option-btn').forEach(b => {
                         b.disabled = true; 
                         b.classList.remove('selected');
                         if (cleanOpt(b.innerText) === correctAnsStrip) {
-                            b.classList.add('correct-btn');
+                            b.style.cssText = "background-color: rgba(34, 197, 94, 0.15) !important; border-color: var(--success) !important; color: var(--success) !important;";
                         }
                     });
                 }
@@ -1601,10 +1603,11 @@ function submitShortAnswer() {
             setTimeout(() => expBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
         }
     } else {
-        feedback.innerText = "❌ Chưa chính xác, hãy thử nhập lại đáp án khác hoặc bấm Bỏ qua!"; feedback.style.color = "var(--danger)";
+        feedback.innerText = "❌ Chưa chính xác, hãy thử nhập lại đáp án khác hoặc Bỏ qua!"; feedback.style.color = "var(--danger)";
         inputEl.style.borderColor = "var(--danger)"; inputEl.style.color = "var(--danger)"; inputEl.style.backgroundColor = "rgba(239, 68, 68, 0.05)";
     }
 }
+
 function nextQuestion() { currentQuestionIndex++; renderQuestion(); }
 
 /* ==========================================
