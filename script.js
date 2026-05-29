@@ -915,27 +915,32 @@ function renderQuestion() {
                     if (isTestMode && testAnswers[currentQuestionIndex][idx] === opt) btn.classList.add('selected');
 
                     btn.onclick = function() { 
-                if (isTestMode) {
-                    testAnswers[currentQuestionIndex] = opt;
-                    optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-                    this.classList.add('selected'); updateDashboard();
-                } else { 
-                    if (!document.getElementById('next-btn').classList.contains('hidden')) return;
-                    
-                    // LÔ-GÍC DOUBLE TAP (CHẠM KÉP)
-                    if (this.classList.contains('selected')) {
-                        // Nếu nút này đang sáng (đã chạm lần 1) -> Chạm phát nữa là CHỐT luôn!
-                        const submitBtn = document.getElementById('normal-submit-btn');
-                        if (submitBtn && !submitBtn.classList.contains('hidden')) submitBtn.click();
-                        return;
-                    }
+                        if (isTestMode) {
+                            // [ĐÃ FIX]: Lưu vào mảng 2 chiều cho đúng câu hỏi con
+                            testAnswers[currentQuestionIndex][idx] = opt;
+                            
+                            // [ĐÃ FIX]: Chỉ xóa sáng nút cũ TRONG PHẠM VI 1 CÂU HỎI CON (subBlock)
+                            subBlock.querySelectorAll('.sub-option-btn').forEach(b => b.classList.remove('selected'));
+                            this.classList.add('selected'); 
+                            updateDashboard();
+                        } else { 
+                            if (!document.getElementById('next-btn').classList.contains('hidden')) return;
+                            
+                            if (this.classList.contains('selected')) {
+                                // [ĐÃ FIX]: Nút nộp bài của chùm là 'reading-submit-btn'
+                                const submitBtn = document.getElementById('reading-submit-btn');
+                                if (submitBtn && !submitBtn.classList.contains('hidden')) submitBtn.click();
+                                return;
+                            }
 
-                    // Chạm lần 1: Xóa sáng nút cũ, bật sáng nút mới
-                    optsContainer.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-                    this.classList.add('selected');
-                    practiceSelectedOpt = opt; practiceSelectedBtn = this;
-                }
-            };
+                            // [ĐÃ FIX]: Chỉ xóa sáng nút cũ TRONG PHẠM VI 1 CÂU HỎI CON (subBlock)
+                            subBlock.querySelectorAll('.sub-option-btn').forEach(b => b.classList.remove('selected'));
+                            this.classList.add('selected');
+                            
+                            // [ĐÃ FIX]: Ghi nhận đáp án vào đúng vị trí của mảng chùm
+                            clusterSelections[idx] = opt;
+                        }
+                    };
                     subBlock.appendChild(btn);
                 });
             }
