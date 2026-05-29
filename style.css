@@ -603,3 +603,23 @@ input:checked + .toggle-slider:before { transform: translateX(20px); background-
     .compose-grid { grid-template-columns: 1fr; height: auto; }
     .compose-editor { min-height: 600px; }
 }
+
+/* Hộp giải thích ở mode Luyện tập */
+.practice-explanation-box {
+    display: none;
+    background-color: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    animation: slideDown 0.3s ease-out;
+}
+.practice-explanation-box.show {
+    display: block;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
