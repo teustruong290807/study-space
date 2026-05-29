@@ -826,6 +826,9 @@ function exitQuiz() {
 /* ==========================================
    6. HIỂN THỊ CÂU HỎI (CÓ NÚT BỎ QUA VÀ HIỆN GIẢI THÍCH)
 ========================================== */
+/* ==========================================
+   6. HIỂN THỊ CÂU HỎI (CÓ NÚT BỎ QUA VÀ HIỆN GIẢI THÍCH)
+========================================== */
 function renderQuestion() {
     if (!isTestMode && currentQuestionIndex >= currentQuizQuestions.length) { showResults(); return; }
 
@@ -1005,7 +1008,7 @@ function renderQuestion() {
                 const expBox = document.getElementById('practice-exp-box');
                 if (expBox) {
                     expBox.classList.add('show');
-                    setTimeout(() => expBox.scrollIntoView({ behavior: 'smooth', block: 'end' }), 150);
+                    setTimeout(() => expBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
                 }
             };
             actionWrapper.appendChild(skipBtn);
@@ -1379,7 +1382,7 @@ function checkAnswer(btnElement, selected, correct) {
 
     if (isC) {
         playCorrectSound();
-        btnElement.classList.remove('selected'); // [FIX CHÍ MẠNG] Tẩy màu xanh dương cũ đi
+        btnElement.classList.remove('selected'); // Tẩy màu xanh dương cũ đi
         btnElement.classList.add('correct-btn'); // Trả lại màu xanh lá cho nút
         feedback.innerText = "Chính xác! Tuyệt vời!"; feedback.style.color = "var(--success)";
         document.getElementById('next-btn').classList.remove('hidden');
@@ -1433,10 +1436,7 @@ function submitClusterAnswer() {
                 const btnTrue = row.querySelector('.btn-true'); const btnFalse = row.querySelector('.btn-false');
                 if(btnTrue) btnTrue.disabled = true; if(btnFalse) btnFalse.disabled = true;
                 const selectedBtn = clusterSelections[i] === "Đúng" ? btnTrue : btnFalse;
-                if(selectedBtn) { 
-                    selectedBtn.classList.remove('selected', 'incorrect-btn'); 
-                    selectedBtn.classList.add('correct-btn'); 
-                }
+                if(selectedBtn) { selectedBtn.classList.remove('selected', 'incorrect-btn'); selectedBtn.classList.add('correct-btn'); }
             }
         });
         feedback.innerText = "Tuyệt vời! Bạn phân tích đúng toàn bộ các mệnh đề."; feedback.style.color = "var(--success)";
@@ -1458,6 +1458,12 @@ function submitClusterAnswer() {
                 if (uAns !== cAns) {
                     const wrongBtn = clusterSelections[i] === "Đúng" ? btnTrue : btnFalse;
                     if(wrongBtn) { wrongBtn.classList.add('incorrect-btn'); setTimeout(() => wrongBtn.classList.remove('incorrect-btn'), 800); }
+                    clusterSelections[i] = null; // Bắt chọn lại
+                } else {
+                    if(btnTrue) btnTrue.disabled = true;
+                    if(btnFalse) btnFalse.disabled = true;
+                    const correctBtn = clusterSelections[i] === "Đúng" ? btnTrue : btnFalse;
+                    if(correctBtn) { correctBtn.classList.remove('selected'); correctBtn.classList.add('correct-btn'); }
                 }
             }
         });
@@ -1502,8 +1508,9 @@ function submitReadingCluster() {
             else {
                 let correctAnsStrip = cleanOpt(subQ.correctAnswer);
                 block.querySelectorAll('.sub-option-btn').forEach(b => {
+                    b.disabled = true; // KHÓA SẠCH TẤT CẢ NÚT
                     b.classList.remove('selected'); // Tẩy màu xanh dương
-                    let btnContentOnly = cleanOpt(b.innerText); b.disabled = true;
+                    let btnContentOnly = cleanOpt(b.innerText);
                     if (btnContentOnly === correctAnsStrip) { b.classList.add('correct-btn'); } 
                 });
             }
@@ -1533,12 +1540,13 @@ function submitReadingCluster() {
                     });
                     clusterSelections[i] = null; // Bắt buộc phải chọn lại
                 } else {
-                    // CÂU ĐÚNG: Tự động khóa màu xanh lá để học sinh biết đã đúng câu này (UX siêu việt)
+                    // [ĐÃ FIX LỖI CỐT LÕI TẠI ĐÂY]
+                    // CÂU ĐÚNG: Khóa TOÀN BỘ nút của câu nhỏ này để học sinh không bấm lộn xộn nữa
                     block.querySelectorAll('.sub-option-btn').forEach(b => {
+                        b.disabled = true; // Khóa sạch B, C, D luôn
+                        b.classList.remove('selected');
                         if (cleanOpt(b.innerText) === correctAnsStrip) {
-                            b.classList.remove('selected');
                             b.classList.add('correct-btn');
-                            b.disabled = true;
                         }
                     });
                 }
