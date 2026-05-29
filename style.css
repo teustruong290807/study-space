@@ -62,10 +62,7 @@ body {
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg-main); color: var(--text-main);
     padding: 0; margin: 0; line-height: 1.6; transition: background-color 0.3s, color 0.3s;
-    overflow: hidden; 
-    height: 100vh; /* Fallback cho máy đời cũ */
-    height: 100dvh; /* [ĐÃ FIX]: Dùng dvh để Android không bị lẹm đáy màn hình */
-    width: 100vw;
+    overflow: hidden; height: 100vh; width: 100vw;
 }
 
 .dashboard-layout {
@@ -344,26 +341,7 @@ body.student-mode button[onclick^="saveNew"] { display: none !important; }
 /* ==========================================================================
    TỐI ƯU HÓA ĐIỆN THOẠI & BOTTOM NAVIGATION
 ========================================================================== */
-#bottom-nav { 
-    display: none; 
-    position: fixed; 
-    bottom: 0; 
-    left: 0; 
-    right: 0; 
-    background: var(--card-bg-elevated); 
-    border-top: 1px solid var(--border-color); 
-    z-index: 999999; /* Tăng max lớp để không bị ai đè lên */
-    box-shadow: 0 -4px 25px rgba(0,0,0,0.15); 
-    /* [ĐÃ FIX]: Thêm , 0px để Android không bị lỗi cú pháp */
-    padding-bottom: env(safe-area-inset-bottom, 0px); 
-    /* [ĐÃ FIX]: Kích hoạt GPU để Android không bị kẹt hiển thị */
-    transform: translateZ(0);
-}
-
-/* [MỚI]: Dùng class để ẩn hiện mượt mà, không dùng JS ép !important nữa */
-#bottom-nav.hide-nav {
-    display: none !important;
-}
+#bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg-elevated); border-top: 1px solid var(--border-color); z-index: 99999; box-shadow: 0 -4px 25px rgba(0,0,0,0.1); padding-bottom: env(safe-area-inset-bottom); }
 .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; color: var(--text-muted); text-decoration: none; font-size: 11px; font-weight: 600; transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; }
 .nav-item i { font-size: 24px; margin-bottom: 4px; transition: 0.2s; }
 .nav-item:hover, .nav-item.active { color: var(--text-main); }
