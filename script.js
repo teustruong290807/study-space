@@ -59,22 +59,21 @@ function cleanOpt(text) {
 function formatText(text) {
     if (!text) return "";
     
-    // 1. Tự động tìm "Câu X:", in đậm nó và gộp với câu lệnh đề
-    let result = text.replace(/((?:Câu|Question|Bài)\s*\d+(?:\s*[\-\–\—]\s*\d+)?[\.\:\-]?\s*)?((?:Mark the letter|Read the following|Choose the|Indicate the|Đọc đoạn văn|Chọn đáp án)[\s\S]{5,250}?(?:\.|\:|\n|$))/gi, function(match, qNum, instruction) {
-        let boldQNum = qNum ? `<b>${qNum}</b>` : ""; // In đậm riêng chữ Câu...
-        let cleanInstruction = instruction.replace(/<br>|\n/g, ' ').trim();
+    // 1. Tàng hình các công tắc bí mật của Giáo viên
+    let result = text
+        .replace(/\[CHÙM\]/gi, '') 
+        .replace(/\[HẾT CHÙM\]/gi, '');
         
-        // Trả về một khối duy nhất, không bị xuống dòng giữa Câu và Lệnh
-        return `<div class="quiz-instruction">${boldQNum} ${cleanInstruction}</div>`;
-    });
+    // 2. Tự động in đậm riêng chữ "Câu X:", "Question X:", "Bài X:" ở đầu dòng
+    result = result.replace(/^(Câu|Question|Bài)\s*\d+(?:\s*[\-\–\—]\s*\d+)?[\.\:\-]?/gim, '<b>$&</b>');
     
-    // 2. Giữ nguyên các xử lý Ảnh/Audio/Xuống dòng khác
+    // 3. Xử lý Ảnh, Audio và Xuống dòng
     result = result
         .replace(/\[IMG:\s*(https?:\/\/[^\]]+)\]/gi, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin: 15px 0;"/><br>')
         .replace(/\[AUDIO:\s*(https?:\/\/[^\]]+)\]/gi, '<br><audio controls style="width: 100%; outline: none; border-radius: 8px; background-color: rgba(0,0,0,0.05); margin: 15px 0;"><source src="$1" type="audio/mpeg">Trình duyệt không hỗ trợ phát âm thanh.</audio><br>')
         .replace(/\n/g, '<br>');
         
-    return result;
+    return result.trim();
 }
 
 // [MỚI] Hàm lấy link Embed Youtube
@@ -531,9 +530,18 @@ function parseTextToJSON(text) {
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
+        
         if (line.toLowerCase().includes("thí sinh chọn đúng hoặc sai") || line.toLowerCase() === "questions") continue;
 
-        let isNewSection = /^(?:read|mark|choose|indicate|complete|listen|đọc|chọn|đánh dấu).*(?:letter|option|passage|blank|question|câu)/i.test(line) && line.length > 25;
+        // 1. [ĐÃ THÊM]: CÔNG TẮC NGẮT CHÙM
+        if (/^\[HẾT CHÙM\]/i.test(line)) {
+            finalizeQuestion();
+            currentContext = []; // Xóa trắng ngữ liệu cũ, ép các câu sau thành câu đơn lẻ
+            continue;
+        }
+
+        // 2. [ĐÃ SỬA]: THÊM TỪ KHÓA [CHÙM] ĐỂ HỆ THỐNG NHẬN DIỆN LÀ ĐOẠN VĂN CHUNG
+        let isNewSection = (/^(?:read|mark|choose|indicate|complete|listen|đọc|chọn|đánh dấu).*(?:letter|option|passage|blank|question|câu)/i.test(line) && line.length > 25) || /^\[CHÙM\]/i.test(line);
 
         if (isNewSection) {
             finalizeQuestion();
@@ -596,7 +604,8 @@ function parseTextToJSON(text) {
             let transMatch = ctxStr.match(/(?:\[Bản dịch\]|Bản dịch|Dịch nghĩa|\[Dịch\])[\:\s]*([\s\S]*)/i);
             if (transMatch) { transStr = transMatch[1].trim(); ctxStr = ctxStr.replace(transMatch[0], '').trim(); }
 
-            let shouldCluster = (q.type === "normal" || q.type === "writing") && ctxStr && (ctxStr.split('\n').length > 2 || ctxStr.toLowerCase().includes('<b>') || ctxStr.toLowerCase().includes('[audio:') || transStr !== "");
+            // 3. [ĐÃ SỬA]: ÉP HỆ THỐNG PHẢI GOM NHÓM KHI THẤY TỪ KHÓA [CHÙM]
+            let shouldCluster = (q.type === "normal" || q.type === "writing") && ctxStr && (ctxStr.split('\n').length > 2 || ctxStr.toLowerCase().includes('<b>') || ctxStr.toLowerCase().includes('[audio:') || transStr !== "" || ctxStr.toLowerCase().includes('[chùm]'));
 
             if (shouldCluster) {
                 if (!currentGroup || currentGroup.context !== ctxStr) {
@@ -644,9 +653,7 @@ function parseTextToJSON(text) {
         } 
         else { groupedParsed.push(currentGroup); }
     }
-    return groupedParsed;
-}
-
+    return groupedParsed;}
 /* ==========================================
    4. QUẢN LÝ DỮ LIỆU
 ========================================== */
