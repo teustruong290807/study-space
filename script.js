@@ -824,9 +824,6 @@ function exitQuiz() {
 }
 
 /* ==========================================
-   6. HIỂN THỊ CÂU HỎI (ĐÃ TẮT TRỘN NGẦM & TÁCH YÊU CẦU ĐỀ)
-========================================== */
-/* ==========================================
    6. HIỂN THỊ CÂU HỎI (CÓ NÚT BỎ QUA VÀ HIỆN GIẢI THÍCH)
 ========================================== */
 function renderQuestion() {
@@ -1200,7 +1197,6 @@ function renderQuestion() {
 
         expBox.innerHTML = `<strong>💡 Giải thích:</strong><div style="margin-top: 8px;">${expContent}</div>`;
         
-        // Thêm nút Tiếp tục xuống dưới cùng hộp giải thích cho tiện bấm
         const nextWrapper = document.createElement('div');
         nextWrapper.style.cssText = 'margin-top: 15px; text-align: right;';
         const inlineNextBtn = document.createElement('button');
@@ -1268,7 +1264,6 @@ function skipPracticeQuestion(type) {
     const q = currentQuizQuestions[currentQuestionIndex];
     const feedback = document.getElementById('feedback');
     
-    // 1. Ghi nhận là SAI vào sổ điểm
     let alreadyAnswered = sessionResultList.some(res => res.questionNum === currentQuestionIndex + 1);
     if (!alreadyAnswered) {
         if (type === 'normal') {
@@ -1288,7 +1283,6 @@ function skipPracticeQuestion(type) {
         }
     }
 
-    // 2. Tự động lật đáp án đúng trên màn hình
     if (type === 'normal') {
         const options = document.querySelectorAll('.option-btn');
         options.forEach(btn => {
@@ -1331,11 +1325,301 @@ function skipPracticeQuestion(type) {
     feedback.innerText = "Bạn đã bỏ qua câu này. Hãy đọc giải thích bên dưới để rút kinh nghiệm nhé!"; 
     feedback.style.color = "var(--text-muted)";
     
-    // 3. Ẩn nút chức năng, Hiện giải thích và nút Next
     document.querySelectorAll('.practice-action-wrapper').forEach(w => w.classList.add('hidden'));
     document.getElementById('next-btn').classList.remove('hidden');
     const expBox = document.getElementById('practice-exp-box');
     if (expBox) expBox.classList.add('show');
+}
+
+/* ==========================================
+   7. LOGIC CHẤM ĐIỂM & RENDER KẾT QUẢ TẤT CẢ CÂU
+========================================== */
+/* ==========================================
+   BỘ CÔNG CỤ HIỆU ỨNG & ÂM THANH
+========================================== */
+let vAudioCtx = null;
+function getAudioCtx() {
+    if (!vAudioCtx) { vAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if (vAudioCtx.state === 'suspended') { vAudioCtx.resume(); }
+    return vAudioCtx;
+}
+
+function playCorrectSound() {
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator(); 
+        const gainNode = ctx.createGain();
+        osc.type = 'sine'; 
+        osc.frequency.setValueAtTime(500, ctx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.1); 
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime); 
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0); 
+        osc.connect(gainNode); 
+        gainNode.connect(ctx.destination);
+        osc.start(); 
+        osc.stop(ctx.currentTime + 1.0);
+    } catch (e) {}
+}
+
+function playErrorSound() {
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator(); 
+        const gainNode = ctx.createGain();
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(300, ctx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0.2, ctx.currentTime); 
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+        osc.connect(gainNode); gainNode.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {}
+}
+
+function playComboSound(streakCount) {
+    playCorrectSound();
+}
+function showFloatingPoints(element, points) {
+    const rect = element.getBoundingClientRect(); const pt = document.createElement('div');
+    pt.className = 'floating-points'; pt.innerText = `+${points}`;
+    pt.style.left = `${rect.left + rect.width / 2 - 20}px`; pt.style.top = `${rect.top}px`;
+    document.body.appendChild(pt); setTimeout(() => pt.remove(), 1000);
+}
+
+function triggerConfetti() {
+    if(typeof confetti !== 'undefined') {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b'] });
+    }
+}
+
+async function confirmSubmitTest(isForced) {
+    let forced = isForced === true; 
+    let missing = [];
+    testAnswers.forEach((ans, i) => { if (!isQuestionAnswered(i)) missing.push(i + 1); });
+
+    let msg = missing.length > 0 ? `LƯU Ý: Bạn còn bỏ sót các chặng: ${missing.join(', ')}.\nBạn có chắc chắn muốn nộp bài không?` : `Bạn đã hoàn thành 100% đề thi. Bạn có chắc chắn nộp bài?`;
+
+    if (forced || confirm(msg)) {
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
+        
+        let hsName = localStorage.getItem('studentName') || "Học sinh ẩn danh";
+        let hsClass = localStorage.getItem('studentClass') || "Không rõ";
+
+        sessionCorrectCount = 0; sessionResultList = []; let wrongQuestionsText = ""; 
+        
+        currentQuizQuestions.forEach((q, i) => {
+            let ans = testAnswers[i];
+            if (q.type === 'normal') {
+                let isC = ans && cleanOpt(ans) === cleanOpt(q.correctAnswer);
+                if (isC) sessionCorrectCount++; else wrongQuestionsText += `Câu ${i+1}; `;
+                sessionResultList.push({ isCorrect: isC, type: 'normal', questionNum: i + 1, content: q.content, options: q.options, correctAnswer: q.correctAnswer, userAnswer: ans, explanation: q.explanation });
+            } 
+            else if (q.type === 'writing') {
+                wrongQuestionsText += `Câu ${i+1} (Bài luận); `;
+                sessionResultList.push({ isCorrect: true, type: 'writing', questionNum: i + 1, content: q.content, userAnswer: ans, explanation: q.explanation });
+            }
+            else if (q.type === 'short-answer') {
+                let formattedUser = (ans || "").replace(/\s+/g, '').toLowerCase(); let formattedCorrect = q.correctAnswer.replace(/\s+/g, '').toLowerCase();
+                let isC = formattedUser === formattedCorrect && formattedUser !== "";
+                if (isC) sessionCorrectCount++; else wrongQuestionsText += `Câu ${i+1}; `;
+                sessionResultList.push({ isCorrect: isC, type: 'short-answer', questionNum: i + 1, content: q.content, correctAnswer: q.correctAnswer, userAnswer: ans, explanation: q.explanation });
+            } 
+            else if (q.type === 'cluster-tf') {
+                let allCorrect = true;
+                if (ans && !ans.includes(null)) { q.statements.forEach((stmt, j) => { if (String(ans[j]).trim() !== String(stmt.correctAnswer).trim()) allCorrect = false; }); } else { allCorrect = false; }
+                if (allCorrect) sessionCorrectCount++; else wrongQuestionsText += `Câu ${i+1} (Bảng); `;
+                sessionResultList.push({ isCorrect: allCorrect, type: 'cluster-tf', questionNum: i + 1, content: `[Mệnh đề bảng] Câu hỏi số ${i + 1}`, statements: q.statements, userAnswer: ans, explanation: q.explanation });
+            } 
+            else if (q.type === 'reading-cluster') {
+                let subQs = []; let allSubC = true;
+                if (ans) {
+                    q.questions.forEach((subQ, j) => {
+                        if (subQ.type === 'writing') {
+                            wrongQuestionsText += `Câu ${i+1}.${j+1} (Bài luận); `;
+                            subQs.push({ isCorrect: true, type: 'writing', questionNum: `${i + 1}.${j + 1}`, content: subQ.content, userAnswer: ans[j], explanation: subQ.explanation });
+                        } else {
+                            let cleanU = cleanOpt(ans[j]); let cleanC = cleanOpt(subQ.correctAnswer);
+                            let isSubC = cleanU === cleanC && cleanU !== "";
+                            if (isSubC) { sessionCorrectCount++; } else { allSubC = false; wrongQuestionsText += `Câu ${i+1}.${j+1}; `; }
+                            subQs.push({ isCorrect: isSubC, type: 'normal', questionNum: `${i + 1}.${j + 1}`, content: subQ.content, options: subQ.options, correctAnswer: subQ.correctAnswer, userAnswer: ans[j], explanation: subQ.explanation });
+                        }
+                    });
+                } else {
+                    allSubC = false;
+                    q.questions.forEach((subQ, j) => {
+                        wrongQuestionsText += `Câu ${i+1}.${j+1}; `;
+                        subQs.push({ isCorrect: false, type: subQ.type === 'writing' ? 'writing' : 'normal', questionNum: `${i + 1}.${j + 1}`, content: subQ.content, options: subQ.options, correctAnswer: subQ.correctAnswer, userAnswer: null, explanation: subQ.explanation });
+                    });
+                }
+                sessionResultList.push({ isCorrect: allSubC, type: 'reading-cluster', context: q.context, translation: q.translation, subQuestions: subQs });
+            }
+        });
+
+        let totalRealQuestions = 0;
+        currentQuizQuestions.forEach(q => { 
+            if (q.type === 'reading-cluster') {
+                q.questions.forEach(sq => { if (sq.type !== 'writing') totalRealQuestions += 1; });
+            } else if (q.type !== 'writing') { totalRealQuestions += 1; }
+        });
+        
+        let scoreString = `${sessionCorrectCount}/${totalRealQuestions}`;
+        
+        let detailedFeedback = wrongQuestionsText || "Làm đúng 100%";
+        sessionResultList.forEach(r => {
+            if (r.type === 'writing' && r.userAnswer) { detailedFeedback += `\n[BÀI LUẬN CÂU ${r.questionNum}]:\n${r.userAnswer}\n`; }
+            if (r.type === 'reading-cluster') {
+                r.subQuestions.forEach(sq => { if (sq.type === 'writing' && sq.userAnswer) detailedFeedback += `\n[BÀI LUẬN CÂU ${sq.questionNum}]:\n${sq.userAnswer}\n`; });
+            }
+        });
+
+        const payload = { action: "submit_score", date: new Date().toLocaleString('vi-VN'), name: hsName, className: hsClass, subject: currentSubject, quizTitle: db[currentSubject][currentQuizIndex].title, score: scoreString, wrongDetails: detailedFeedback };
+        fetch(CLOUD_API_URL, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).catch(err => console.log("Lỗi gửi điểm", err));
+
+        const currentQuiz = db[currentSubject][currentQuizIndex];
+        await updateUserProgress(currentSubject, currentQuiz.title, true, scoreString);
+
+        delete db[currentSubject][currentQuizIndex].progress; localStorage.setItem('myStudyData', JSON.stringify(db));
+        showResults();
+    }
+}
+
+function showResults() {
+    showScreen('screen-result'); document.getElementById('app-title').innerText = "Hoàn Thành";
+    
+    let totalRealQuestions = 0;
+    currentQuizQuestions.forEach(q => { 
+        if (q.type === 'reading-cluster') {
+            q.questions.forEach(sq => { if (sq.type !== 'writing') totalRealQuestions += 1; });
+        } else if (q.type !== 'writing') { totalRealQuestions += 1; }
+    });
+
+    document.getElementById('final-score').innerText = `${sessionCorrectCount}/${totalRealQuestions}`;
+    document.getElementById('correct-count').innerText = sessionCorrectCount;
+    
+    let wrongCount = 0;
+    sessionResultList.forEach(item => {
+        if(item.type === 'reading-cluster') { item.subQuestions.forEach(sq => { if(sq.type !== 'writing' && !sq.isCorrect) wrongCount++; }); }
+        else { if(item.type !== 'writing' && !item.isCorrect) wrongCount++; }
+    });
+    document.getElementById('incorrect-count').innerText = wrongCount;
+
+    const wrongListDiv = document.getElementById('wrong-answers-list'); wrongListDiv.innerHTML = '';
+    
+    if (sessionResultList.length > 0) {
+        document.getElementById('wrong-answers-container').classList.remove('hidden');
+        
+        sessionResultList.forEach(item => {
+            const div = document.createElement('div'); div.className = 'wrong-item';
+            let borderColor = (item.type === 'writing' || item.isCorrect) ? "var(--success)" : "var(--danger)";
+            if (item.type === 'reading-cluster') borderColor = item.isCorrect ? "var(--success)" : "var(--danger)";
+            
+            div.style.cssText = `background: var(--card-bg); border: 1px solid ${borderColor}; border-radius: 12px; padding: 20px; margin-bottom: 25px; border-left: 4px solid ${borderColor}; box-shadow: var(--shadow-soft);`;
+            let html = ``;
+
+            if (item.type === 'reading-cluster') {
+                html += `<div style="background: var(--card-bg-elevated); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                            <h4 style="margin-top:0; color: var(--primary);">📄 Ngữ liệu:</h4>
+                            <div style="margin-bottom: 15px; font-size: 15px; color: var(--text-main);">${formatText(item.context)}</div>`;
+                if (item.translation) { html += `<h4 style="margin-top:0; color: var(--success);">🇻🇳 Bản dịch:</h4><div style="font-size: 15px; color: var(--text-main); opacity: 0.9;">${formatText(item.translation)}</div>`; }
+                html += `</div>`;
+                item.subQuestions.forEach(sub => { html += renderSingleQuestionResult(sub); });
+            } else { html += renderSingleQuestionResult(item); }
+            
+            div.innerHTML = html; wrongListDiv.appendChild(div);
+        });
+    } else { document.getElementById('wrong-answers-container').classList.add('hidden'); }
+
+    const quizData = db[currentSubject][currentQuizIndex];
+    const videoContainer = document.getElementById('result-video-container');
+    const fallbackLink = document.getElementById('result-video-fallback');
+
+    if (quizData && quizData.youtubeLink) {
+        let embedUrl = getYoutubeEmbedUrl(quizData.youtubeLink);
+        if (embedUrl) {
+            document.getElementById('result-video-iframe').src = embedUrl;
+            if (fallbackLink) fallbackLink.href = quizData.youtubeLink; 
+            videoContainer.classList.remove('hidden');
+        } else {
+            videoContainer.classList.add('hidden');
+        }
+    } else {
+        videoContainer.classList.add('hidden');
+        document.getElementById('result-video-iframe').src = "";
+    }
+
+    const exitBtn = document.querySelector('#screen-result button[onclick="exitQuiz()"]');
+    if (exitBtn) {
+        if (isIsolatedMode) {
+            exitBtn.innerText = "Làm lại bài này 🔄";
+            exitBtn.onclick = () => {
+                const isTest = db[currentSubject][currentQuizIndex].progress ? db[currentSubject][currentQuizIndex].progress.isTestMode : true;
+                startQuiz(currentQuizIndex, isTest); 
+            };
+        } else {
+            exitBtn.innerText = "Hoàn tất & Thoát";
+            exitBtn.onclick = exitQuiz;
+        }
+    }
+
+    function triggerMathJaxResult() {
+        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) { MathJax.typesetPromise([document.getElementById('wrong-answers-container')]).catch((err) => console.log('MathJax error: ', err)); } else { setTimeout(triggerMathJaxResult, 100); }
+    }
+    triggerMathJaxResult();
+}
+
+function renderSingleQuestionResult(q) {
+    let h = `<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border-color);">`;
+    
+    if (q.type === 'writing') {
+        h += `<div style="font-weight: bold; font-size: 16px; margin-bottom: 15px; color: var(--primary);">✍️ Câu ${q.questionNum}: ${formatText(q.content)}</div>`;
+        h += `<div style="margin-bottom: 15px; background: var(--card-bg-elevated); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">BÀI LÀM CỦA BẠN:</div>
+                <div style="color: var(--text-main); white-space: pre-wrap; font-family: inherit;">${q.userAnswer || 'Không có nội dung'}</div>
+              </div>`;
+    } else {
+        let icon = q.isCorrect ? "✅" : "❌";
+        let titleColor = q.isCorrect ? "var(--success)" : "var(--danger)";
+        h += `<div style="font-weight: bold; font-size: 16px; margin-bottom: 15px; color: ${titleColor};">${icon} Câu ${q.questionNum}: ${formatText(q.content)}</div>`;
+
+        if (q.options && q.options.length > 0) {
+            h += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">`;
+            q.options.forEach(opt => {
+                let cleanO = cleanOpt(opt); 
+                let isCorrectOpt = cleanO === cleanOpt(q.correctAnswer); 
+                let isSelected = q.userAnswer && cleanOpt(q.userAnswer) === cleanO;
+                let bg = "var(--card-bg-elevated)"; let border = "1px solid var(--border-color)"; let color = "var(--text-main)";
+                
+                if (isCorrectOpt) { bg = "rgba(22, 163, 74, 0.1)"; border = "2px solid var(--success)"; color = "var(--success)"; } 
+                else if (isSelected && !isCorrectOpt) { bg = "rgba(239, 68, 68, 0.1)"; border = "2px solid var(--danger)"; color = "var(--danger)"; }
+                
+                h += `<div style="padding: 12px; border-radius: 8px; background: ${bg}; border: ${border}; color: ${color}; font-weight: 500;">${cleanO}</div>`;
+            });
+            h += `</div>`;
+        } 
+        else if (q.type === 'cluster-tf') {
+            h += `<div style="margin-bottom: 15px; background: var(--card-bg-elevated); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">`;
+            q.statements.forEach((stmt, j) => {
+                let uA = q.userAnswer ? q.userAnswer[j] : null;
+                let cA = stmt.correctAnswer;
+                let sColor = (uA === cA) ? "var(--success)" : "var(--danger)";
+                let sIcon = (uA === cA) ? "✅" : "❌";
+                h += `<div style="margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                        <div style="color: var(--text-main);">- ${formatText(stmt.text)}</div>
+                        <div style="color: ${sColor}; font-size: 14px; margin-top: 4px; font-weight: bold;">${sIcon} Bạn chọn: <b>${uA || 'Bỏ trống'}</b> | Đáp án: <b>${cA}</b></div>
+                      </div>`;
+            });
+            h += `</div>`;
+        }
+        else if (q.type === 'short-answer') {
+             h += `<div style="margin-bottom: 15px; background: var(--card-bg-elevated); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                     <span style="color: var(--danger); font-weight: bold;">✍️ Đã điền: ${q.userAnswer || 'Bỏ trống'}</span><br>
+                     <span style="color: var(--success); font-weight: bold;">🎯 Đáp án đúng: ${cleanOpt(q.correctAnswer)}</span>
+                   </div>`;
+        }
+    }
+
+    if (q.explanation) { h += `<div class="explanation-box" style="color: var(--text-main);"><strong>💡 Giải thích:</strong><br>${formatText(q.explanation)}</div>`; }
+    h += `</div>`; return h;
 }
 
 function selectReadingAnswer(qIdx, selectedOpt, btnEl) {
@@ -1347,7 +1631,7 @@ function selectReadingAnswer(qIdx, selectedOpt, btnEl) {
 }
 
 /* ==========================================================
-   BỘ 4 HÀM CHẤM ĐIỂM (CÓ HIỆN GIẢI THÍCH KHI ĐÚNG)
+   BỘ 4 HÀM CHẤM ĐIỂM (CÓ HIỆN GIẢI THÍCH KHI ĐÚNG / BỎ QUA)
 ========================================================== */
 function selectClusterAnswer(index, value) {
     if (!document.getElementById('next-btn').classList.contains('hidden')) return; 
@@ -1489,11 +1773,10 @@ function submitReadingCluster() {
             const block = document.getElementById(`sub-q-${i}`);
             if (subQ.type === 'writing') { const ta = block.querySelector('textarea'); if (ta) ta.disabled = true; } 
             else {
-                let userAnsStrip = cleanOpt(clusterSelections[i]); let correctAnsStrip = cleanOpt(subQ.correctAnswer);
+                let correctAnsStrip = cleanOpt(subQ.correctAnswer);
                 block.querySelectorAll('.sub-option-btn').forEach(b => {
                     let btnContentOnly = cleanOpt(b.innerText); b.disabled = true;
                     if (btnContentOnly === correctAnsStrip) { b.classList.add('correct-btn'); } 
-                    else if (btnContentOnly === userAnsStrip && userAnsStrip !== correctAnsStrip) { b.classList.add('incorrect-btn'); }
                 });
             }
         });
