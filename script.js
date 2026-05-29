@@ -1,4 +1,8 @@
-const defaultData = {
+/* ==========================================================================
+   HỆ THỐNG LUYỆN THI CÁ NHÂN (BẢN V9 - VIDEO YOUTUBE & UI TỐI ƯU)
+========================================================================== */
+
+var defaultData = {
     "Toán": [], "Tiếng Anh": [], "Công nghệ": [], "Sinh học": [], "Vocabulary": [], "Documents": {}
 };
 
@@ -27,12 +31,12 @@ var focusedOptionBtn = null;
 var quizTimerInterval = null;
 var remainingSeconds = 0;
 
-const IMGBB_API_KEY = '1a44a672e09fd4613cac5a56ec4183ac'; 
+var IMGBB_API_KEY = '1a44a672e09fd4613cac5a56ec4183ac'; 
 
 // 👇 DÁN WEB APP URL MỚI CỦA BẢN CLONE VÀO ĐÂY 👇
-const CLOUD_API_URL = 'https://script.google.com/macros/s/AKfycbxJ7flmxYRTQVcq3Xp94l6syQ_fzU6mhKzP6ywDnD38JE6Wb4hAKkOeZhUXGZmpo6r_aw/exec';
+var CLOUD_API_URL = 'https://script.google.com/macros/s/AKfycbxJ7flmxYRTQVcq3Xp94l6syQ_fzU6mhKzP6ywDnD38JE6Wb4hAKkOeZhUXGZmpo6r_aw/exec';
 
-let userProgress = {};
+var userProgress = {};
 
 function getQueryParams() {
     const params = new URLSearchParams(window.location.search);
